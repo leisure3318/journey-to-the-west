@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>西行幸存者 - Sprite Demo</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #1a1a2e; display: flex; justify-content: center; align-items: center; height: 100vh; flex-direction: column; }
+  canvas { border: 2px solid #e94560; image-rendering: pixelated; }
+  .info { color: #eee; font-family: monospace; margin-top: 12px; font-size: 14px; text-align: center; }
+  .title { color: #e94560; font-family: monospace; font-size: 24px; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="title">西行幸存者 - Sprite Demo</div>
+<canvas id="game" width="800" height="600"></canvas>
+<div class="info">方向键/WASD 移动唐僧 | 悟空、八戒、沙僧环绕 | 白龙马跟随</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+
+const FRAME_SIZE = 128;
+const SPRITE_COLS = 5;
+const SPRITE_ROWS = 4;
+const DRAW_SIZE = 64;
+const DIR_MAP = { up: 0, right: 1, down: 2, left: 3 };
+
+const keys = {};
+window.addEventListener('keydown', e => keys[e.key] = true);
+window.addEventListener('keyup', e => keys[e.key] = false);
+
+function loadImage(src) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.src = src;
+  });
+}
+
+class Character {
+  constructor(sheet, x, y, speed) {
+    this.sheet = sheet;
+    this.x = x;
+    this.y = y;
+    this.speed = speed;
+    this.dir = 'down';
+    this.frame = 0;
+    this.animTimer = 0;
+    this.animSpeed = 0.15;
+    this.moving = false;
+  }
+
+  draw() {
+    const row = DIR_MAP[this.dir];
+    const col = this.moving ? 1 + Math.floor(this.frame) % 4 : 0;
+    const sx = col * FRAME_SIZE;
+    const sy = row * FRAME_SIZE;
+    ctx.drawImage(
+      this.sheet,
+      sx, sy, FRAME_SIZE, FRAME_SIZE,
+      this.x - DRAW_SIZE / 2, this.y - DRAW_SIZE / 2, DRAW_SIZE, DRAW_SIZE
+    );
+  }
+
+  update(dt) {
+    if (this.moving) {
+      this.frame += this.animSpeed;
+      if (this.frame >= 4) this.frame = 0;
+    } else {
+      this.frame = 0;
+    }
+  }
+}
+
+class Orbiter extends Character {
+  constructor(sheet, target, radius, angleOffset, orbitSpeed) {
+    super(sheet, 0, 0, 0);
+    this.target = target;
+    this.radius = radius;
+    this.angle = angleOffset;
+    this.orbitSpeed = orbitSpeed;
+  }
+
+  update(dt) {
+    this.angle += this.orbitSpeed * dt;
+    const prevX = this.x;
+    const prevY = this.y;
+    this.x = this.target.x + Math.cos(this.angle) * this.radius;
+    this.y = this.target.y + Math.sin(this.angle) * this.radius;
+
+    const dx = this.x - prevX;
+    const dy = this.y - prevY;
+    this.moving = true;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      this.dir = dx > 0 ? 'right' : 'left';
+    } else {
+      this.dir = dy > 0 ? 'down' : 'up';
+    }
+
+    super.update(dt);
+  }
+}
+
+async function main() {
+  const [tangsengSheet, wukongSheet, bajieSheet, wujingSheet, bailongmaSheet] = await Promise.all([
+    loadImage('assets/sprites/heroes/sliced_v3/tangseng_sheet.png'),
+    loadImage('assets/sprites/heroes/sliced_v3/wukong_sheet.png'),
+    loadImage('assets/sprites/heroes/sliced_v3/bajie_sheet.png'),
+    loadImage('assets/sprites/heroes/sliced_v3/wujing_sheet.png'),
+    loadImage('assets/sprites/heroes/sliced_v3/bailongma_sheet.png'),
+  ]);
+
+  const tangseng = new Character(tangsengSheet, 400, 300, 150);
+  const wukong = new Orbiter(wukongSheet, tangseng, 80, 0, 2.5);
+  const bajie = new Orbiter(bajieSheet, tangseng, 120, Math.PI * 2 / 3, 1.5);
+  const wujing = new Orbiter(wujingSheet, tangseng, 140, Math.PI * 4 / 3, 1.2);
+  const bailongma = new Character(bailongmaSheet, 400, 340, 160);
+
+  // 草地背景格子
+  function drawBackground() {
+    ctx.fillStyle = '#2d5a27';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.strokeStyle = '#3a6b34';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 40) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 40) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+  }
+
+  // 画阴影
+  function drawShadow(x, y) {
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + DRAW_SIZE / 2 - 4, 20, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  let lastTime = performance.now();
+
+  function gameLoop(now) {
+    const dt = (now - lastTime) / 1000;
+    lastTime = now;
+
+    // 唐僧移动
+    let dx = 0, dy = 0;
+    if (keys['ArrowUp'] || keys['w'] || keys['W']) dy = -1;
+    if (keys['ArrowDown'] || keys['s'] || keys['S']) dy = 1;
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) dx = -1;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) dx = 1;
+
+    tangseng.moving = dx !== 0 || dy !== 0;
+
+    if (tangseng.moving) {
+      const len = Math.sqrt(dx * dx + dy * dy);
+      dx /= len; dy /= len;
+      tangseng.x += dx * tangseng.speed * dt;
+      tangseng.y += dy * tangseng.speed * dt;
+
+      // 边界
+      tangseng.x = Math.max(DRAW_SIZE / 2, Math.min(canvas.width - DRAW_SIZE / 2, tangseng.x));
+      tangseng.y = Math.max(DRAW_SIZE / 2, Math.min(canvas.height - DRAW_SIZE / 2, tangseng.y));
+
+      if (Math.abs(dx) > Math.abs(dy)) {
+        tangseng.dir = dx > 0 ? 'right' : 'left';
+      } else {
+        tangseng.dir = dy > 0 ? 'down' : 'up';
+      }
+    }
+
+    // 白龙马跟随唐僧身后
+    const followDist = 40;
+    const dxH = tangseng.x - bailongma.x;
+    const dyH = tangseng.y - bailongma.y;
+    const dist = Math.sqrt(dxH * dxH + dyH * dyH);
+    if (dist > followDist) {
+      const nx = dxH / dist;
+      const ny = dyH / dist;
+      bailongma.x += nx * bailongma.speed * dt;
+      bailongma.y += ny * bailongma.speed * dt;
+      bailongma.moving = true;
+      if (Math.abs(nx) > Math.abs(ny)) {
+        bailongma.dir = nx > 0 ? 'right' : 'left';
+      } else {
+        bailongma.dir = ny > 0 ? 'down' : 'up';
+      }
+    } else {
+      bailongma.moving = false;
+      bailongma.dir = tangseng.dir;
+    }
+
+    tangseng.update(dt);
+    wukong.update(dt);
+    bajie.update(dt);
+    wujing.update(dt);
+    bailongma.update(dt);
+
+    // 绘制
+    drawBackground();
+
+    // 按 y 坐标排序绘制（简易深度排序）
+    const chars = [tangseng, wukong, bajie, wujing, bailongma].sort((a, b) => a.y - b.y);
+    for (const c of chars) {
+      drawShadow(c.x, c.y);
+      c.draw();
+    }
+
+    // 名字标签
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ffd700';
+    ctx.fillText('唐僧', tangseng.x, tangseng.y - DRAW_SIZE / 2 - 4);
+    ctx.fillStyle = '#ff6600';
+    ctx.fillText('悟空', wukong.x, wukong.y - DRAW_SIZE / 2 - 4);
+    ctx.fillStyle = '#cc99ff';
+    ctx.fillText('八戒', bajie.x, bajie.y - DRAW_SIZE / 2 - 4);
+    ctx.fillStyle = '#5588cc';
+    ctx.fillText('沙僧', wujing.x, wujing.y - DRAW_SIZE / 2 - 4);
+    ctx.fillStyle = '#e0e8ff';
+    ctx.fillText('白龙马', bailongma.x, bailongma.y - DRAW_SIZE / 2 - 4);
+
+    requestAnimationFrame(gameLoop);
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+main();
+</script>
+</body>
+</html>

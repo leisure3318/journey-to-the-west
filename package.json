@@ -1,0 +1,41 @@
+{
+  "name": "journey-to-the-west",
+  "version": "1.0.0",
+  "description": "",
+  "source": "index.html",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "dev": "parcel index.html --open",
+    "build": "parcel build index.html --dist-dir dist --public-url /journey-to-the-west/",
+    "deploy": "npm run build && gh-pages -d dist"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leisure3318/journey-to-the-west.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/leisure3318/journey-to-the-west/issues"
+  },
+  "homepage": "https://github.com/leisure3318/journey-to-the-west#readme",
+  "staticFiles": {
+    "staticPath": "assets",
+    "staticOutPath": "assets"
+  },
+  "dependencies": {
+    "phaser": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.3",
+    "gh-pages": "^6.3.0",
+    "parcel": "^2.16.4",
+    "parcel-reporter-static-files-copy": "^1.5.3",
+    "process": "^0.11.10",
+    "typescript": "^6.0.3"
+  }
+}

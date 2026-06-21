@@ -26,7 +26,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: rm -f package-lock.json && npm install
-      - run: npx parcel build index.html --dist-dir dist --public-url /westward-survivors/
+      - run: npx parcel build index.html --dist-dir dist --public-url /journey-to-the-west/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

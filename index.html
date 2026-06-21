@@ -11,9 +11,25 @@
     html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1a2e; touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
     body { display: flex; justify-content: center; align-items: center; }
     canvas { display: block; max-width: 100%; max-height: 100%; }
+    #rotate-hint {
+      display: none; position: fixed; inset: 0; z-index: 99999;
+      background: rgba(0,0,0,0.92); color: #ffdd44;
+      font: bold 24px sans-serif; text-align: center;
+      flex-direction: column; justify-content: center; align-items: center; gap: 20px;
+    }
+    #rotate-hint .icon { font-size: 60px; animation: spin 2s ease-in-out infinite; }
+    @keyframes spin { 0%,100%{transform:rotate(0deg)} 50%{transform:rotate(90deg)} }
+    @media screen and (orientation: portrait) and (max-width: 900px) {
+      #rotate-hint { display: flex; }
+    }
   </style>
 </head>
 <body>
+  <div id="rotate-hint">
+    <div class="icon">📱</div>
+    <div>请横屏游玩</div>
+    <div style="font-size:14px;color:#999">Rotate your device to landscape</div>
+  </div>
   <script type="module" src="src/main.ts"></script>
 </body>
 </html>

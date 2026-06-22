@@ -35,8 +35,9 @@ export IMAGE_API_BASE="your-api-base-url"
 GameScene（纯协调层，不含业务逻辑）
   ├── Player（唐僧）
   ├── DiscipleManager → WukongAI / BajieAI / WujingAI + CloneSystem + UltimateSystem + WujingAbilities
-  ├── EnemySpawner → Enemy 群
-  ├── BossSystem → Boss
+  ├── EnemySpawner → Enemy 群（渐进增强：HP/伤害/速度随时间持续提升）
+  ├── BossSystem → Boss（6个Boss分布在5个区域）
+  ├── BossLootSystem（击杀Boss掉落随机永久宝物）
   ├── CombatSystem（投射物/VFX/伤害/血条）
   ├── ExperienceSystem（经验珠 → 升级）
   ├── RecruitmentSystem（收徒 POI）
@@ -44,8 +45,13 @@ GameScene（纯协调层，不含业务逻辑）
   ├── TangsengSkills（紧箍咒/大慈悲）
   ├── DragonTrail（龙息尾迹）
   ├── EvolutionSystem（技能进化配方）
+  ├── TerrainSystem（5种地形区域渲染）
+  ├── ObstacleSystem（70个可碰撞障碍物，按区域分布）
+  ├── BiomeEffects（区域环境粒子+色调叠层）
+  ├── SpatialGrid（200px网格空间分区，光环/范围查询优化）
+  ├── SaveSystem（localStorage存档：记录/统计/音量）
   ├── FogOfWar / DecorationSystem / LandmarkSystem
-  └── UI: HUD / LevelUpPanel / SkillBar / MiniMap / ItemBar / BossHpBar / PauseMenu / GameOverPanel / VictoryPanel
+  └── UI: HUD / LevelUpPanel / SkillBar / MiniMap / ItemBar / RelicBar / VirtualJoystick / PauseMenu / GameOverPanel / VictoryPanel
 ```
 
 ### 核心设计模式
@@ -55,6 +61,9 @@ GameScene（纯协调层，不含业务逻辑）
 - **GameScene 是协调层**：只负责 new 系统 + 每帧调 update + 转发事件，业务逻辑在各系统内部
 - **事件驱动**：`enemy-killed`、`boss-spawned`、`boss-killed`、`enemy-shoot`、`enemy-explode`、`xp-collected`、`ultimate-activated`、`headband-activated`、`mercy-released`、`evolution-triggered`、`wave-changed`、`enemy-damaged` 通过 Phaser events 解耦
 - **程序化纹理**：BootScene 中用 Canvas 绘制简易纹理（grass_tile、chest_closed、chest_open 等），不依赖外部图片
+- **地形区域**：TerrainSystem 管理 5 种区域（草原/山林/水泽/沙漠/火域），Graphics 叠层渲染 + 区域专属装饰
+- **Boss 宝物**：BossLootSystem 击杀 Boss 生成随机永久宝物（2-3 条属性），RelicBar 右侧展示
+- **敌人渐进增强**：EnemySpawner 按时间线性增长 HP/伤害（+4%/分钟）、移速、刷怪上限
 - **程序化音效**：SoundManager 用 Web Audio API 生成所有音效（25种），无外部音频文件。五声音阶 BGM，M 键静音
 
 ### 游戏画面布局（800×600）
@@ -109,16 +118,24 @@ src/
 │   ├── EnemySpawner.ts          # 刷怪（4阶段密度递增，6种敌人按阶段解锁）
 │   ├── ExperienceSystem.ts      # 经验珠吸附(发光脉冲动画) + 升级触发
 │   ├── RecruitmentSystem.ts     # 收徒系统（POI触发）
+│   ├── TerrainSystem.ts          # 地形区域渲染（5种区域+地面细节）
+│   ├── BossLootSystem.ts        # Boss宝物掉落（随机永久属性）
+│   ├── ObstacleSystem.ts        # 环境障碍物（70个StaticGroup，按区域分布）
+│   ├── BiomeEffects.ts          # 区域环境粒子效果+色调叠层
+│   ├── SpatialGrid.ts           # 200px网格空间分区（光环/范围查询优化）
+│   ├── SaveSystem.ts            # localStorage存档（记录/统计/音量）
 │   ├── FogOfWar.ts              # 战争迷雾
 │   ├── LandmarkSystem.ts        # 地标显示
-│   └── DecorationSystem.ts      # 地图装饰物（树/石/草丛）
+│   └── DecorationSystem.ts      # 地图装饰物（按区域分配，350个）
 ├── ui/
 │   ├── HUD.ts                   # HP条/XP条/计时器/击杀数/波次/冷却条
 │   ├── LevelUpPanel.ts          # 升级3选1卡牌（显示角色归属标签）
 │   ├── SkillBar.ts              # 左侧技能栏（文字按人物分组）
 │   ├── ItemBar.ts               # 底部物品栏（数字键使用，支持堆叠×N）
 │   ├── BossHpBar.ts             # Boss血条
-│   ├── MiniMap.ts               # 右上角小地图（迷雾+POI+宝箱+玩家位置）
+│   ├── MiniMap.ts               # 右上角小地图（区域颜色+迷雾+POI+宝箱+玩家位置）
+│   ├── RelicBar.ts              # 右侧宝物栏（Boss掉落宝物图标+tooltip）
+│   ├── VirtualJoystick.ts       # 移动端虚拟摇杆（触摸设备自动启用）
 │   ├── VictoryPanel.ts          # 通关画面
 │   ├── PauseMenu.ts             # ESC暂停/恢复
 │   └── GameOverPanel.ts         # 游戏结束画面（统计+重开）
@@ -162,7 +179,7 @@ docs/
 
 | 文件 | 用途 |
 |------|------|
-| src/config/GameConfig.ts | 核心常量(WORLD 3200×2400, PLAYER, XP) + 统一 re-export 入口 |
+| src/config/GameConfig.ts | 核心常量(WORLD 6400×4800, PLAYER, XP) + 统一 re-export 入口 |
 | src/config/HeroConfig.ts | 英雄数值 + AI 参数 |
 | src/config/UpgradeConfig.ts | 19个升级+4个单人升级 + UpgradeState 接口 + defaultUpgradeState() |
 | src/scenes/GameScene.ts | 核心游戏场景（纯协调层，~266行） |
@@ -175,7 +192,7 @@ docs/
 
 - [x] 核心循环：移动/杀怪/经验/升级3选1
 - [x] 师徒四人+白龙马，各有独立AI状态机
-- [x] 3种敌人行为（chase/ranged/explosive）
+- [x] 5种敌人行为（chase/ranged/explosive/summoner/trapper）
 - [x] 3个Boss（黄风大王/白骨精/红孩儿）
 - [x] 大招系统（Boss战每20秒触发）
 - [x] 暴击系统（橙色伤害数字+尺寸区分暴击+全员暴击）
@@ -198,12 +215,24 @@ docs/
 - [x] 程序化音效系统（25种音效 + 五声音阶BGM，Web Audio API，M键静音）
 - [x] 大招特效升级（屏幕闪光/粒子爆发/冲击波/碎片/旋涡）
 - [x] 大招平时积累、见Boss自动释放
+- [x] 大地图 6400×4800 + 5 种地形区域（草原/山林/水泽/沙漠/火域）
+- [x] 6 个 Boss 分布在不同区域（黑熊精/黄风大王/白骨精/蜘蛛精/金角大王/红孩儿）
+- [x] Boss 宝物系统（击杀掉落随机永久加成宝物 + 右侧宝物栏）
+- [x] 敌人渐进增强（HP/伤害/速度随时间持续提升）
+- [x] POI 场景图片圆形融合（Canvas 径向渐隐，边缘自然过渡）
+- [x] 设置面板（暂停菜单内音量滑块 + 静音按钮）
+- [x] 环境障碍物（70 个可碰撞物按区域分布，玩家/敌人均碰撞）
+- [x] 伤害飘字对象池（40 个 Text 循环复用，减少 GC）
+- [x] 移动端虚拟摇杆（左下角触摸摇杆，触摸设备自动启用）
+- [x] 区域环境效果（火域飘火/沙漠风沙/沼泽雾气/森林落叶+色调叠层）
+- [x] 存档系统（localStorage：最佳记录/Boss 进度/音量持久化）
+- [x] 空间分区碰撞（SpatialGrid 200px 网格，光环查询 O(nearby) 替代 O(all)）
 
 ## 待开发功能（按优先级）
 
-- [ ] **白龙马化龙** — 短暂变身攻击
-- [ ] **更多敌人行为** — 召唤型、环境型（放陷阱）、精英视觉标识
 - [ ] **章节关卡制** — 81难分章节，难度递增，章节间过场
+- [ ] **Boss 专属 sprite sheet** — 28 个 Boss 图已有，需切图接入动画
+- [ ] **剧情回放** — 查看已解锁的剧情/CG
 
 ## 添加新系统的步骤
 

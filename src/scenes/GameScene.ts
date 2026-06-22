@@ -15,6 +15,7 @@ import { HUD, CooldownInfo } from "../ui/HUD";
 import { MiniMap } from "../ui/MiniMap";
 import { PauseMenu } from "../ui/PauseMenu";
 import { GameOverPanel } from "../ui/GameOverPanel";
+import { VictoryPanel } from "../ui/VictoryPanel";
 import { SkillBar } from "../ui/SkillBar";
 import { EvolutionSystem } from "../systems/EvolutionSystem";
 import { TangsengSkills } from "../systems/TangsengSkills";
@@ -22,7 +23,15 @@ import { DragonTrail } from "../systems/DragonTrail";
 import { ChestSystem } from "../systems/ChestSystem";
 import { ItemBar } from "../ui/ItemBar";
 import { SoundManager } from "../systems/SoundManager";
+import { TerrainSystem } from "../systems/TerrainSystem";
+import { BossLootSystem } from "../systems/BossLootSystem";
+import { ObstacleSystem } from "../systems/ObstacleSystem";
+import { BiomeEffects } from "../systems/BiomeEffects";
+import { SpatialGrid } from "../systems/SpatialGrid";
+import { RelicBar } from "../ui/RelicBar";
+import { VirtualJoystick } from "../ui/VirtualJoystick";
 import { WORLD, SOLO_UPGRADES, UpgradeState, UpgradeOption, defaultUpgradeState } from "../config/GameConfig";
+import { saveSystem } from "../systems/SaveSystem";
 import { generatePOIs } from "../config/MapConfig";
 
 export class GameScene extends Phaser.Scene {
@@ -47,21 +56,26 @@ export class GameScene extends Phaser.Scene {
   private chestSystem!: ChestSystem;
   private itemBar!: ItemBar;
   private soundMgr = new SoundManager();
+  private bossLoot = new BossLootSystem();
+  private relicBar!: RelicBar;
+  private biomeEffects!: BiomeEffects;
+  private spatialGrid!: SpatialGrid;
 
   private kills = 0;
   private pendingLevelUps = 0;
   private gameOver = false;
   private upgrades!: UpgradeState;
+  private bossesKilled: string[] = [];
 
   constructor() { super("GameScene"); }
 
   create() {
     this.upgrades = defaultUpgradeState();
-    this.kills = 0; this.pendingLevelUps = 0; this.gameOver = false;
+    this.kills = 0; this.pendingLevelUps = 0; this.gameOver = false; this.bossesKilled = [];
     const cx = WORLD.width / 2, cy = WORLD.height / 2;
     this.physics.world.setBounds(-200, -200, WORLD.width + 400, WORLD.height + 400);
     this.cameras.main.setBounds(0, 0, WORLD.width, WORLD.height);
-    this.add.tileSprite(cx, cy, WORLD.width, WORLD.height, "grass_tile").setDepth(-1);
+    new TerrainSystem(this);
 
     this.player = new Player(this, cx, cy);
     (this.player.body as Phaser.Physics.Arcade.Body).setBoundsRectangle(new Phaser.Geom.Rectangle(0, 0, WORLD.width, WORLD.height));
@@ -73,6 +87,9 @@ export class GameScene extends Phaser.Scene {
     this.spawner = new EnemySpawner(this, this.enemies);
     this.combat = new CombatSystem(this, this.enemies);
     new DecorationSystem(this);
+    const obstacles = new ObstacleSystem(this);
+    this.physics.add.collider(this.player, obstacles.getGroup());
+    this.physics.add.collider(this.enemies, obstacles.getGroup());
     this.fog = new FogOfWar(this);
     new LandmarkSystem(this, pois);
 
@@ -104,7 +121,12 @@ export class GameScene extends Phaser.Scene {
         item.apply({ upgrades: this.upgrades, player: this.player, enemies: this.enemies, scene: this });
       }
     });
-    this.pauseMenu = new PauseMenu(this, () => !this.gameOver && !this.levelUpPanel.isActive(), () => this.soundMgr.pause(), () => this.soundMgr.resume());
+    this.relicBar = new RelicBar(this);
+    const joystick = new VirtualJoystick(this);
+    this.player.joystick = joystick;
+    this.biomeEffects = new BiomeEffects(this);
+    this.spatialGrid = new SpatialGrid(WORLD.width, WORLD.height);
+    this.pauseMenu = new PauseMenu(this, () => !this.gameOver && !this.levelUpPanel.isActive(), this.soundMgr, () => this.soundMgr.pause(), () => this.soundMgr.resume());
     this.gameOverPanel = new GameOverPanel(this);
 
     const muteKey = this.input.keyboard!.addKey("M");
@@ -122,6 +144,7 @@ export class GameScene extends Phaser.Scene {
       if (this.upgrades.regenPerTick > 0) { this.player.heal(this.upgrades.regenPerTick); this.soundMgr.heal(); }
       if (this.player.hp < this.player.maxHp * 0.5) { this.player.heal(5); this.player.showChantEffect(); this.soundMgr.heal(); }
       if (this.player.hp < this.player.maxHp * 0.25) { this.soundMgr.lowHpWarning(); } }});
+    this.soundMgr.setVolume(saveSystem.volume);
     this.soundMgr.startBgm();
   }
 
@@ -139,11 +162,24 @@ export class GameScene extends Phaser.Scene {
       this.soundMgr.mountHorse();
     });
     this.events.on("boss-killed", () => {
-      const stats = { elapsedMs: this.spawner.getElapsed(), kills: this.kills, level: this.xpSystem.getLevel(), bossName: this.bossSystem.getBoss()?.bossName ?? "" };
+      const bossName = this.bossSystem.getBoss()?.bossName ?? "";
+      const stats = { elapsedMs: this.spawner.getElapsed(), kills: this.kills, level: this.xpSystem.getLevel(), bossName };
       this.bossSystem.onBossKilled(stats);
       this.player.dismountHorse();
       this.discipleMgr.showHorse();
-      if (this.bossSystem.isAllDefeated()) { this.gameOver = true; this.soundMgr.victory(); this.soundMgr.stopBgm(); }
+      if (bossName) {
+        this.bossesKilled.push(bossName);
+        const relic = this.bossLoot.generateRelic(bossName);
+        this.bossLoot.applyRelic(relic, this.upgrades);
+        this.player.maxHp = this.upgrades.playerMaxHp;
+        this.player.moveSpeed = this.upgrades.playerSpeed;
+        this.player.shieldMax = this.upgrades.shieldMax;
+        this.relicBar.addRelic(relic);
+        this.showRelicDrop(relic);
+      }
+      if (this.bossSystem.isAllDefeated()) { this.gameOver = true; this.soundMgr.victory(); this.soundMgr.stopBgm();
+        this.time.delayedCall(2000, () => new VictoryPanel(this).show({ elapsedMs: this.spawner.getElapsed(), kills: this.kills, level: this.xpSystem.getLevel(), bossName, bossesKilled: this.bossesKilled }));
+      }
       else { this.soundMgr.bossDefeat(); }
     });
     this.events.on("xp-collected", () => { this.soundMgr.xpPickup(); });
@@ -153,6 +189,8 @@ export class GameScene extends Phaser.Scene {
     this.events.on("evolution-triggered", () => { this.soundMgr.evolution(); });
     this.events.on("wave-changed", () => { this.soundMgr.waveChange(); });
     this.events.on("enemy-damaged", () => { this.soundMgr.enemyHit(); });
+    this.events.on("enemy-trap", (x: number, y: number, dmg: number) => { this.placeTrap(x, y, dmg); });
+    this.events.on("enemy-summon", (x: number, y: number) => { this.summonMinion(x, y); });
 
     const eProjGroup = this.physics.add.group();
     this.physics.add.overlap(this.player, eProjGroup, (_p, _proj) => {
@@ -207,7 +245,12 @@ export class GameScene extends Phaser.Scene {
     const moving = this.player.handleMovement();
     if (this.player.isDead()) {
       if (this.upgrades.deathSaves > 0) { this.upgrades.deathSaves--; this.player.triggerDeathSave(); this.soundMgr.deathSave(); }
-      else { this.gameOver = true; this.soundMgr.gameOver(); this.soundMgr.stopBgm(); this.gameOverPanel.show({ elapsedMs: this.spawner.getElapsed(), kills: this.kills, level: this.xpSystem.getLevel() }); return; }
+      else {
+        this.gameOver = true; this.soundMgr.gameOver(); this.soundMgr.stopBgm();
+        this.hud.update(0, this.player.maxHp, this.xpSystem.getXp(), this.xpSystem.getXpToNext(),
+          this.xpSystem.getLevel(), this.spawner.getElapsed(), this.kills);
+        this.gameOverPanel.show({ elapsedMs: this.spawner.getElapsed(), kills: this.kills, level: this.xpSystem.getLevel(), bossesKilled: this.bossesKilled }); return;
+      }
     }
 
     this.discipleMgr.syncUpgrades(this.upgrades);
@@ -229,12 +272,14 @@ export class GameScene extends Phaser.Scene {
     this.bossSystem.update(time, delta, this.player.x, this.player.y, this.player, this.combat, this.upgrades.damageMultiplier);
     this.xpSystem.setAttractRadius(this.upgrades.xpAttractRadius);
     this.xpSystem.update(this.player.x, this.player.y);
+    this.spatialGrid.rebuild(this.enemies.getChildren());
     if (this.upgrades.auraRadius > 0) this.tickAura(delta);
     this.player.updateShieldVisual();
     this.chestSystem.update(this.player.x, this.player.y, (k) => this.discipleMgr.has(k));
     this.itemBar.update();
     this.fog.update(this.player.x, this.player.y);
     this.miniMap.update(this.player.x, this.player.y, this.fog, this.chestSystem.getUnopenedPositions());
+    this.biomeEffects.update(this.player.x, this.player.y, delta);
     this.ySortAll();
     this.combat.drawEnemyHpBars();
     this.hud.update(this.player.hp, this.player.maxHp, this.xpSystem.getXp(), this.xpSystem.getXpToNext(),
@@ -274,13 +319,71 @@ export class GameScene extends Phaser.Scene {
     }
     this.auraRing.setPosition(this.player.x, this.player.y).setRadius(r);
     const dmg = auraDps * (delta / 1000);
-    for (const child of this.enemies.getChildren()) {
-      const e = child as Enemy;
-      if (!e.active || Phaser.Math.Distance.Between(this.player.x, this.player.y, e.x, e.y) > r) continue;
+    for (const e of this.spatialGrid.queryRadius(this.player.x, this.player.y, r)) {
       e.hp -= dmg;
       if (e.hp <= 0) { e.takeDamage(0); continue; }
       (e.body as Phaser.Physics.Arcade.Body).velocity.scale(1 - auraSlow);
     }
+  }
+
+  private placeTrap(x: number, y: number, dmg: number) {
+    const trap = this.add.image(x, y, "web_trap").setDepth(5).setDisplaySize(60, 60).setAlpha(0.7);
+    const trapRadius = 30;
+    const trapTimer = this.time.addEvent({ delay: 500, loop: true, callback: () => {
+      if (!trap.active) return;
+      const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, x, y);
+      if (dist <= trapRadius && !this.player.invincible) {
+        this.player.takeDamage(Math.ceil(dmg * 0.5), this.upgrades.damageMultiplier);
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
+        body.velocity.scale(0.4);
+      }
+    }});
+    this.time.delayedCall(8000, () => {
+      trapTimer.destroy();
+      this.tweens.add({ targets: trap, alpha: 0, duration: 400, onComplete: () => trap.destroy() });
+    });
+  }
+
+  private summonMinion(x: number, y: number) {
+    const count = Phaser.Math.Between(1, 2);
+    for (let i = 0; i < count; i++) {
+      const ox = x + (Math.random() - 0.5) * 60;
+      const oy = y + (Math.random() - 0.5) * 60;
+      let minion = this.enemies.getFirstDead(false) as Enemy | null;
+      if (!minion) {
+        minion = new Enemy(this, ox, oy, "enemy_monkey_imp");
+        this.enemies.add(minion, true);
+      }
+      minion.spawn(ox, oy, { hp: 6, damage: 3, speed: 85, xpValue: 2, behavior: "chase" });
+      minion.setTexture("enemy_monkey_imp");
+      minion.setScale(0.32);
+      minion.setTint(0x88ff88);
+      minion.setAlpha(0);
+      this.tweens.add({ targets: minion, alpha: 1, duration: 300 });
+    }
+  }
+
+  private showRelicDrop(relic: import("../systems/BossLootSystem").Relic) {
+    const cx = 400, cy = 200;
+    const bg = this.add.rectangle(cx, cy, 260, 90 + relic.buffs.length * 18, 0x1a1a2e, 0.9)
+      .setStrokeStyle(2, 0xffaa00).setScrollFactor(0).setDepth(950).setAlpha(0);
+    const icon = this.add.image(cx - 90, cy - 10, relic.icon).setDisplaySize(40, 40)
+      .setScrollFactor(0).setDepth(951).setAlpha(0);
+    const title = this.add.text(cx + 10, cy - 30, `获得 ${relic.name}`, {
+      fontSize: "16px", color: "#ffaa00", fontStyle: "bold", stroke: "#000000", strokeThickness: 3,
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(951).setAlpha(0);
+    const buffTexts = relic.buffs.map((b, i) =>
+      this.add.text(cx + 10, cy - 6 + i * 18, b.label, {
+        fontSize: "12px", color: "#66ff66", stroke: "#000000", strokeThickness: 2,
+      }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(951).setAlpha(0)
+    );
+    const all = [bg, icon, title, ...buffTexts];
+    this.tweens.add({ targets: all, alpha: 1, duration: 400, ease: "Sine.easeOut" });
+    this.time.delayedCall(3500, () => {
+      this.tweens.add({ targets: all, alpha: 0, y: "-=20", duration: 600,
+        onComplete: () => all.forEach(o => o.destroy()),
+      });
+    });
   }
 
   private onLevelUp() { this.pendingLevelUps++; this.soundMgr.levelUp(); if (!this.levelUpPanel.isActive()) this.showNextLevelUp(); }

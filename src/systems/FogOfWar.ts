@@ -1,10 +1,10 @@
 import Phaser from "phaser";
 import { WORLD } from "../config/GameConfig";
 
-const CELL = 50;
+const CELL = 80;
 const COLS = Math.ceil(WORLD.width / CELL);
 const ROWS = Math.ceil(WORLD.height / CELL);
-const REVEAL_RADIUS = 250;
+const REVEAL_RADIUS = 320;
 
 export class FogOfWar {
   private revealed: boolean[][];

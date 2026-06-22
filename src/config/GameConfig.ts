@@ -1,6 +1,6 @@
 export const WORLD = {
-  width: 3200,
-  height: 2400,
+  width: 6400,
+  height: 4800,
 };
 
 export const PLAYER = {

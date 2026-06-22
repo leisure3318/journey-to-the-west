@@ -10,10 +10,19 @@ export class CombatSystem {
   private projectiles: Phaser.Physics.Arcade.Group;
   private enemyHpGfx: Phaser.GameObjects.Graphics;
   private bossCollider?: Phaser.Physics.Arcade.Collider;
+  private dmgPool: Phaser.GameObjects.Text[] = [];
 
   constructor(scene: Phaser.Scene, enemies: Phaser.Physics.Arcade.Group) {
     this.scene = scene;
     this.enemies = enemies;
+
+    for (let i = 0; i < 40; i++) {
+      const t = scene.add.text(0, 0, "", {
+        fontSize: "15px", color: "#ff8844", fontStyle: "bold",
+        stroke: "#000000", strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(600).setVisible(false).setActive(false);
+      this.dmgPool.push(t);
+    }
 
     this.projectiles = scene.physics.add.group();
     scene.physics.add.overlap(this.projectiles, this.enemies, (_p, _e) => {
@@ -154,17 +163,16 @@ export class CombatSystem {
 
   private showDamageNumber(x: number, y: number, amount: number, isCrit: boolean) {
     if (amount <= 0) return;
+    const text = this.dmgPool.find(t => !t.active);
+    if (!text) return;
+
     const fontSize = isCrit ? "26px" : "15px";
     const color = isCrit ? "#ffcc00" : "#ff8844";
-    const label = isCrit ? `${amount}!` : `${amount}`;
-    const text = this.scene.add
-      .text(x + Phaser.Math.Between(-8, 8), y - 10, label, {
-        fontSize, color, fontStyle: "bold",
-        stroke: "#000000", strokeThickness: isCrit ? 4 : 2,
-      })
-      .setOrigin(0.5)
-      .setDepth(600);
-    if (isCrit) text.setScale(0.5);
+    text.setText(isCrit ? `${amount}!` : `${amount}`)
+      .setStyle({ fontSize, color, strokeThickness: isCrit ? 4 : 2 })
+      .setPosition(x + Phaser.Math.Between(-8, 8), y - 10)
+      .setScale(isCrit ? 0.5 : 1).setAlpha(1)
+      .setVisible(true).setActive(true);
     this.scene.tweens.add({
       targets: text,
       y: y - (isCrit ? 55 : 40),
@@ -172,7 +180,7 @@ export class CombatSystem {
       scaleX: isCrit ? 1.3 : 1,
       scaleY: isCrit ? 1.3 : 1,
       duration: isCrit ? 800 : 600,
-      onComplete: () => text.destroy(),
+      onComplete: () => { text.setVisible(false).setActive(false); },
     });
   }
 }

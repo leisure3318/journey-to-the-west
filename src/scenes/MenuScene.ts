@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { CutsceneConfig } from "./CutsceneScene";
 import { SoundManager } from "../systems/SoundManager";
+import { saveSystem } from "../systems/SaveSystem";
 
 const PROLOGUE: CutsceneConfig = {
   id: "prologue",
@@ -55,6 +56,7 @@ export class MenuScene extends Phaser.Scene {
   create() {
     this.walkers = [];
     this.groupT = 0;
+    this.soundMgr.setVolume(saveSystem.volume);
     this.soundMgr.startMenuBgm();
     this.drawBackground();
     this.setupWalkers();
@@ -133,8 +135,20 @@ export class MenuScene extends Phaser.Scene {
       fontSize: "12px", color: "#999999",
     }).setOrigin(0.5).setDepth(20);
 
-    this.add.text(790, 590, "v0.4", {
+    this.add.text(790, 590, "v0.5", {
       fontSize: "10px", color: "#666666",
     }).setOrigin(1, 1).setDepth(20);
+
+    if (saveSystem.totalRuns > 0) {
+      const lines = [
+        `总场次 ${saveSystem.totalRuns}  |  总击杀 ${saveSystem.totalKills}`,
+        `最佳 ${saveSystem.formatTime(saveSystem.bestTimeMs)}  |  Lv ${saveSystem.bestLevel}  |  ${saveSystem.bestKills}杀`,
+        saveSystem.bossesDefeated.length > 0 ? `已征服 ${saveSystem.bossesDefeated.join("、")}` : "",
+      ].filter(Boolean).join("\n");
+      this.add.text(10, 570, lines, {
+        fontSize: "10px", color: "#999966", lineSpacing: 4,
+        stroke: "#000000", strokeThickness: 2,
+      }).setOrigin(0, 1).setDepth(20);
+    }
   }
 }

@@ -1,4 +1,4 @@
-export type EnemyBehavior = "chase" | "ranged" | "explosive";
+export type EnemyBehavior = "chase" | "ranged" | "explosive" | "summoner" | "trapper";
 
 export interface EnemyTypeConfig {
   id: string;
@@ -19,6 +19,8 @@ export const ENEMY_TYPES: EnemyTypeConfig[] = [
   { id: "fire_spirit", texture: "enemy_fire_spirit", hp: 6, damage: 15, speed: 100, scale: 0.39, xpValue: 6, minPhase: 2, behavior: "explosive" },
   { id: "scorpion_imp", texture: "enemy_scorpion_imp", hp: 14, damage: 8, speed: 75, scale: 0.46, xpValue: 7, minPhase: 2, behavior: "chase" },
   { id: "bear_demon", texture: "enemy_bear_demon", hp: 40, damage: 10, speed: 35, scale: 0.65, xpValue: 15, minPhase: 3, behavior: "chase" },
+  { id: "web_spinner", texture: "enemy_web_spinner", hp: 18, damage: 6, speed: 55, scale: 0.46, xpValue: 10, minPhase: 2, behavior: "trapper" },
+  { id: "tree_demon", texture: "enemy_tree_demon", hp: 25, damage: 5, speed: 30, scale: 0.55, xpValue: 12, minPhase: 3, behavior: "summoner" },
 ];
 
 export const ELITE_CHANCE = 0.05;
@@ -26,10 +28,10 @@ export const ELITE_MULTIPLIER = { hp: 3, damage: 1.5, scale: 1.4, xp: 5 };
 
 export const SPAWNER = {
   phases: [
-    { startMs: 0, intervalMs: 2000, maxAlive: 15 },
-    { startMs: 60_000, intervalMs: 1500, maxAlive: 25 },
-    { startMs: 180_000, intervalMs: 1000, maxAlive: 40 },
-    { startMs: 300_000, intervalMs: 700, maxAlive: 60 },
+    { startMs: 0, intervalMs: 2000, maxAlive: 20 },
+    { startMs: 60_000, intervalMs: 1500, maxAlive: 35 },
+    { startMs: 180_000, intervalMs: 1000, maxAlive: 55 },
+    { startMs: 300_000, intervalMs: 700, maxAlive: 80 },
   ],
   spawnMargin: 80,
 };

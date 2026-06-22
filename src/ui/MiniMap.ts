@@ -1,6 +1,6 @@
 import Phaser from "phaser";
 import { WORLD } from "../config/GameConfig";
-import { POIConfig } from "../config/MapConfig";
+import { POIConfig, getBiome, BIOME_COLORS } from "../config/MapConfig";
 import { FogOfWar } from "../systems/FogOfWar";
 
 const MAP_W = 160;
@@ -25,19 +25,21 @@ export class MiniMap {
   update(playerX: number, playerY: number, fog: FogOfWar, chestPositions?: { x: number; y: number }[]) {
     this.gfx.clear();
 
-    // 背景边框
     this.gfx.fillStyle(0x000000, 0.6);
     this.gfx.fillRect(MAP_X - 2, MAP_Y - 2, MAP_W + 4, MAP_H + 4);
 
-    // 迷雾渲染（已探索=深绿，未探索=黑色）
     const grid = fog.getRevealedGrid();
     const cellW = MAP_W / FogOfWar.getCols();
     const cellH = MAP_H / FogOfWar.getRows();
+    const fogCell = FogOfWar.getCellSize();
 
     for (let y = 0; y < FogOfWar.getRows(); y++) {
       for (let x = 0; x < FogOfWar.getCols(); x++) {
         if (grid[y][x]) {
-          this.gfx.fillStyle(0x2d5a27, 0.8);
+          const worldX = x * fogCell + fogCell / 2;
+          const worldY = y * fogCell + fogCell / 2;
+          const biome = getBiome(worldX, worldY);
+          this.gfx.fillStyle(BIOME_COLORS[biome].minimap, 0.8);
         } else {
           this.gfx.fillStyle(0x111111, 0.8);
         }
@@ -45,7 +47,6 @@ export class MiniMap {
       }
     }
 
-    // POI 标记（仅已发现的）
     for (const poi of this.pois) {
       if (!fog.isRevealed(poi.x, poi.y) && !this.discovered.has(poi.id)) continue;
       this.discovered.add(poi.id);
@@ -57,7 +58,6 @@ export class MiniMap {
       this.gfx.fillCircle(mx, my, 3);
     }
 
-    // 宝箱标记（已揭雾的）
     if (chestPositions) {
       for (const cp of chestPositions) {
         if (!fog.isRevealed(cp.x, cp.y)) continue;
@@ -68,7 +68,6 @@ export class MiniMap {
       }
     }
 
-    // 玩家位置
     const px = MAP_X + playerX * this.scaleX;
     const py = MAP_Y + playerY * this.scaleY;
     this.gfx.fillStyle(0xffdd44);

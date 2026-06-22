@@ -5,6 +5,7 @@ export class SoundManager {
   private master: GainNode | null = null;
   private lastPlayed = new Map<string, number>();
   private _muted = false;
+  private _volume = 1;
   private bgmActive = false;
   private bgmTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -12,12 +13,21 @@ export class SoundManager {
     if (!this.ctx) {
       this.ctx = new AudioContext();
       this.master = this.ctx.createGain();
-      this.master.gain.value = MASTER_VOL;
+      this.master.gain.value = MASTER_VOL * this._volume;
       this.master.connect(this.ctx.destination);
     }
     if (this.ctx.state === "suspended") this.ctx.resume();
     return this.ctx;
   }
+
+  setVolume(v: number) {
+    this._volume = Math.max(0, Math.min(1, v));
+    if (this.master && !this._muted) {
+      this.master.gain.value = MASTER_VOL * this._volume;
+    }
+  }
+
+  get volume() { return this._volume; }
 
   private canPlay(id: string, cooldownMs: number): boolean {
     if (this._muted) return false;
@@ -338,7 +348,7 @@ export class SoundManager {
 
   toggleMute(): boolean {
     this._muted = !this._muted;
-    if (this.master) this.master.gain.value = this._muted ? 0 : MASTER_VOL;
+    if (this.master) this.master.gain.value = this._muted ? 0 : MASTER_VOL * this._volume;
     if (this._muted) this.stopBgm();
     else this.startBgm();
     return this._muted;

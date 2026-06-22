@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { PLAYER } from "../config/GameConfig";
+import { VirtualJoystick } from "../ui/VirtualJoystick";
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
   hp: number;
@@ -9,6 +10,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
   facing = "down";
   shieldHp = 0;
   shieldMax = 0;
+  joystick?: VirtualJoystick;
   private shieldGfx?: Phaser.GameObjects.Arc;
   private riding = false;
   private readonly ridingSpeedBonus = 60;
@@ -47,6 +49,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     if (this.cursors.right.isDown || this.wasd.D.isDown) dx = 1;
     if (this.cursors.up.isDown || this.wasd.W.isDown) dy = -1;
     if (this.cursors.down.isDown || this.wasd.S.isDown) dy = 1;
+
+    if (dx === 0 && dy === 0 && this.joystick?.isActive()) {
+      dx = this.joystick.dx;
+      dy = this.joystick.dy;
+    }
 
     if (dx === 0 && dy === 0) {
       const pointer = this.scene.input.activePointer;

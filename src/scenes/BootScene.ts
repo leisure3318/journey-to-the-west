@@ -8,6 +8,8 @@ const ENEMY_TEXTURES = [
   { key: "enemy_demon_archer", path: "assets/sprites/enemies/common/demon_archer.png" },
   { key: "enemy_scorpion_imp", path: "assets/sprites/enemies/common/scorpion_imp.png" },
   { key: "enemy_bear_demon", path: "assets/sprites/enemies/common/bear_demon.png" },
+  { key: "enemy_web_spinner", path: "assets/sprites/enemies/common/web_spinner.png" },
+  { key: "enemy_tree_demon", path: "assets/sprites/enemies/common/tree_demon.png" },
 ];
 
 export class BootScene extends Phaser.Scene {
@@ -48,6 +50,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image("boss_yellow_wind", "assets/sprites/enemies/bosses/yellow_wind_king.png");
     this.load.image("boss_white_bone", "assets/sprites/enemies/bosses/white_bone_spirit.png");
     this.load.image("boss_red_boy", "assets/sprites/enemies/bosses/red_boy.png");
+    this.load.image("boss_black_bear", "assets/sprites/enemies/bosses/black_bear_king.png");
+    this.load.image("boss_gold_horn", "assets/sprites/enemies/bosses/gold_horn_king.png");
+    this.load.image("boss_spider", "assets/sprites/enemies/bosses/spider_sister.png");
     this.load.image("enemy_fire_spirit", "assets/sprites/enemies/common/fire_spirit.png");
 
     const skillIcons = [
@@ -77,6 +82,12 @@ export class BootScene extends Phaser.Scene {
       "wujing_evo_general", "tangseng_evo_buddha", "bailongma_evo_dragon",
     ];
     for (const name of vfxFiles) this.load.image(`vfx_${name}`, `assets/skills/vfx/${name}.png`);
+
+    const poiImages = [
+      "wuzhishan", "yingchoujian", "gaolaozhuang", "liushahe",
+      "heifengshan", "huangfengling", "baiguling", "pansidong", "pingdingshan", "huoyundong",
+    ];
+    for (const name of poiImages) this.load.image(`poi_${name}`, `assets/pois/${name}.png`);
 
     this.load.image("menu_bg", "assets/menu_bg.png");
     const cgFiles = [
@@ -202,6 +213,120 @@ export class BootScene extends Phaser.Scene {
     chestOpen.fillRect(8, 14, 16, 8);
     chestOpen.generateTexture("chest_open", 32, 26);
     chestOpen.destroy();
+
+    const pineGfx = this.make.graphics({ x: 0, y: 0 });
+    pineGfx.fillStyle(0x5a3a1a);
+    pineGfx.fillRect(14, 30, 4, 10);
+    pineGfx.fillStyle(0x0e3e0e);
+    pineGfx.fillTriangle(16, 2, 4, 22, 28, 22);
+    pineGfx.fillStyle(0x125a12, 0.7);
+    pineGfx.fillTriangle(16, 10, 6, 28, 26, 28);
+    pineGfx.generateTexture("deco_pine", 32, 40);
+    pineGfx.destroy();
+
+    const cactusGfx = this.make.graphics({ x: 0, y: 0 });
+    cactusGfx.fillStyle(0x2a6a2a);
+    cactusGfx.fillRect(12, 8, 8, 24);
+    cactusGfx.fillRect(4, 14, 8, 6);
+    cactusGfx.fillRect(20, 18, 8, 6);
+    cactusGfx.fillStyle(0x3a8a3a, 0.7);
+    cactusGfx.fillRect(14, 10, 4, 20);
+    cactusGfx.generateTexture("deco_cactus", 32, 36);
+    cactusGfx.destroy();
+
+    const deadTreeGfx = this.make.graphics({ x: 0, y: 0 });
+    deadTreeGfx.fillStyle(0x4a3a2a);
+    deadTreeGfx.fillRect(14, 16, 4, 20);
+    deadTreeGfx.lineStyle(2, 0x4a3a2a);
+    deadTreeGfx.lineBetween(16, 16, 8, 6);
+    deadTreeGfx.lineBetween(16, 16, 24, 4);
+    deadTreeGfx.lineBetween(16, 20, 6, 14);
+    deadTreeGfx.generateTexture("deco_dead_tree", 32, 36);
+    deadTreeGfx.destroy();
+
+    const reedGfx = this.make.graphics({ x: 0, y: 0 });
+    reedGfx.lineStyle(2, 0x5a8a4a);
+    reedGfx.lineBetween(8, 30, 10, 4);
+    reedGfx.lineBetween(14, 30, 16, 6);
+    reedGfx.lineBetween(20, 30, 18, 8);
+    reedGfx.fillStyle(0x7aaa5a, 0.7);
+    reedGfx.fillCircle(10, 4, 3);
+    reedGfx.fillCircle(16, 6, 2);
+    reedGfx.generateTexture("deco_reed", 28, 34);
+    reedGfx.destroy();
+
+    const lavaRockGfx = this.make.graphics({ x: 0, y: 0 });
+    lavaRockGfx.fillStyle(0x3a3a3a);
+    lavaRockGfx.fillCircle(12, 14, 10);
+    lavaRockGfx.fillStyle(0x2a2a2a);
+    lavaRockGfx.fillCircle(10, 12, 6);
+    lavaRockGfx.fillStyle(0xff4400, 0.3);
+    lavaRockGfx.fillCircle(8, 10, 3);
+    lavaRockGfx.generateTexture("deco_lava_rock", 24, 24);
+    lavaRockGfx.destroy();
+
+    const mushroomGfx = this.make.graphics({ x: 0, y: 0 });
+    mushroomGfx.fillStyle(0x8a7a5a);
+    mushroomGfx.fillRect(8, 12, 4, 8);
+    mushroomGfx.fillStyle(0xcc3333);
+    mushroomGfx.fillCircle(10, 10, 7);
+    mushroomGfx.fillStyle(0xffffff, 0.6);
+    mushroomGfx.fillCircle(8, 8, 2);
+    mushroomGfx.fillCircle(13, 9, 1.5);
+    mushroomGfx.generateTexture("deco_mushroom", 20, 22);
+    mushroomGfx.destroy();
+
+    const poolGfx = this.make.graphics({ x: 0, y: 0 });
+    poolGfx.fillStyle(0x2a5a7a, 0.6);
+    poolGfx.fillEllipse(16, 12, 28, 18);
+    poolGfx.fillStyle(0x4a8aaa, 0.3);
+    poolGfx.fillEllipse(14, 10, 18, 10);
+    poolGfx.lineStyle(1, 0x6aaacc, 0.4);
+    poolGfx.lineBetween(8, 11, 14, 11);
+    poolGfx.generateTexture("deco_pool", 32, 24);
+    poolGfx.destroy();
+
+    const emberGfx = this.make.graphics({ x: 0, y: 0 });
+    emberGfx.fillStyle(0xff6600, 0.4);
+    emberGfx.fillCircle(6, 6, 5);
+    emberGfx.fillStyle(0xff8800, 0.6);
+    emberGfx.fillCircle(6, 6, 3);
+    emberGfx.fillStyle(0xffaa00);
+    emberGfx.fillCircle(6, 5, 1.5);
+    emberGfx.generateTexture("deco_ember", 12, 12);
+    emberGfx.destroy();
+
+    const duneGfx = this.make.graphics({ x: 0, y: 0 });
+    duneGfx.fillStyle(0x9a8a58, 0.5);
+    duneGfx.fillEllipse(20, 14, 36, 16);
+    duneGfx.fillStyle(0xaa9a68, 0.3);
+    duneGfx.fillEllipse(18, 12, 24, 10);
+    duneGfx.generateTexture("deco_dune", 40, 20);
+    duneGfx.destroy();
+
+    const webTrapGfx = this.make.graphics({ x: 0, y: 0 });
+    webTrapGfx.lineStyle(1, 0xcccccc, 0.5);
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      webTrapGfx.lineBetween(16, 16, 16 + Math.cos(a) * 14, 16 + Math.sin(a) * 14);
+    }
+    for (let r = 5; r <= 14; r += 4) {
+      webTrapGfx.strokeCircle(16, 16, r);
+    }
+    webTrapGfx.fillStyle(0xcccccc, 0.08);
+    webTrapGfx.fillCircle(16, 16, 14);
+    webTrapGfx.generateTexture("web_trap", 32, 32);
+    webTrapGfx.destroy();
+
+    const eliteRingGfx = this.make.graphics({ x: 0, y: 0 });
+    eliteRingGfx.lineStyle(2, 0xff4444, 0.6);
+    eliteRingGfx.strokeCircle(16, 16, 14);
+    eliteRingGfx.lineStyle(1, 0xffaa00, 0.3);
+    eliteRingGfx.strokeCircle(16, 16, 12);
+    eliteRingGfx.fillStyle(0xff4444, 0.08);
+    eliteRingGfx.fillCircle(16, 16, 14);
+    eliteRingGfx.generateTexture("elite_ring", 32, 32);
+    eliteRingGfx.destroy();
 
     this.scene.start("MenuScene");
   }

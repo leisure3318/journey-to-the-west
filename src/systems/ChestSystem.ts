@@ -30,8 +30,8 @@ interface Chest {
 }
 
 const TRIGGER_RADIUS = 50;
-const CHEST_MIN = 8;
-const CHEST_MAX = 12;
+const CHEST_MIN = 15;
+const CHEST_MAX = 25;
 const POI_AVOID = 200;
 
 export const CHEST_ITEMS: ChestItemDef[] = [

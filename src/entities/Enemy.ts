@@ -18,6 +18,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
   behavior: EnemyBehavior = "chase";
   private knockedBack = false;
   private shootTimer = 0;
+  private abilityTimer = 0;
 
   constructor(scene: Phaser.Scene, x: number, y: number, texture: string) {
     super(scene, x, y, texture);
@@ -39,6 +40,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     this.behavior = config.behavior ?? "chase";
     this.knockedBack = false;
     this.shootTimer = 0;
+    this.abilityTimer = 0;
     this.setAlpha(1);
     this.clearTint();
   }
@@ -72,6 +74,36 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
       case "explosive":
         body.setVelocity(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
         if (dist < 40) this.explode();
+        break;
+
+      case "summoner":
+        if (dist > 280) {
+          body.setVelocity(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
+        } else if (dist < 200) {
+          body.setVelocity(-Math.cos(angle) * this.speed * 0.4, -Math.sin(angle) * this.speed * 0.4);
+        } else {
+          body.setVelocity(0);
+        }
+        this.abilityTimer += delta;
+        if (this.abilityTimer >= 5000) {
+          this.abilityTimer = 0;
+          this.scene.events.emit("enemy-summon", this.x, this.y);
+        }
+        break;
+
+      case "trapper":
+        if (dist > 250) {
+          body.setVelocity(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
+        } else {
+          const flee = dist < 120;
+          const moveAngle = flee ? angle + Math.PI : angle + Math.PI / 2;
+          body.setVelocity(Math.cos(moveAngle) * this.speed * 0.6, Math.sin(moveAngle) * this.speed * 0.6);
+        }
+        this.abilityTimer += delta;
+        if (this.abilityTimer >= 4000) {
+          this.abilityTimer = 0;
+          this.scene.events.emit("enemy-trap", this.x, this.y, this.damage);
+        }
         break;
     }
 

@@ -154,6 +154,7 @@ assets/
 ├── skills/vfx/                  # 20 张技能特效（已压缩至256px）
 ├── skills/icons/                # 19 张技能图标（已压缩至128px）
 ├── skills/items/                # 15 张法器图标（已压缩至128px）
+├── pois/                        # 10 张POI场景图（GPT Image 2，已压缩至960px）
 ├── cutscenes/                   # 4 张序幕CG（已压缩至960px）
 ├── menu_bg.png                  # 首页山水画（已压缩至960px）
 └── series/                      # 公众号系列封面图
@@ -193,7 +194,7 @@ docs/
 - [x] 核心循环：移动/杀怪/经验/升级3选1
 - [x] 师徒四人+白龙马，各有独立AI状态机
 - [x] 5种敌人行为（chase/ranged/explosive/summoner/trapper）
-- [x] 3个Boss（黄风大王/白骨精/红孩儿）
+- [x] 6个Boss（黑熊精/黄风大王/白骨精/蜘蛛精/金角大王/红孩儿）
 - [x] 大招系统（Boss战每20秒触发）
 - [x] 暴击系统（橙色伤害数字+尺寸区分暴击+全员暴击）
 - [x] 护盾系统（沙僧卷帘守护）
@@ -210,7 +211,7 @@ docs/
 - [x] 加载进度条（48MB资源）
 - [x] 唐僧主动技能 — 紧箍咒（强化悟空）+ 大慈悲（全屏净化）+ 倒计时UI
 - [x] 白龙马龙息尾迹（移动时留火焰伤害区域）
-- [x] 宝箱系统（8-12个/局，15种物品，3tier掉落，小地图橙色标记）
+- [x] 宝箱系统（15-25个/局，15种物品，3tier掉落，小地图橙色标记）
 - [x] 物品栏（底部9格，数字键/点击使用，同类堆叠×N）
 - [x] 程序化音效系统（25种音效 + 五声音阶BGM，Web Audio API，M键静音）
 - [x] 大招特效升级（屏幕闪光/粒子爆发/冲击波/碎片/旋涡）
@@ -271,8 +272,34 @@ docs/
 - **类型安全**：不要 any 满天飞
 - **常量集中管理**：数值放 config 文件，不要硬编码
 
+## 项目统计（Day 6 结束）
+
+| 指标 | 数值 |
+|------|------|
+| TypeScript 文件 | 52 个 |
+| 总代码行数 | ~22,000 行 |
+| 图片资产 | 129 张（15MB） |
+| 外部音频文件 | 0 个 |
+| 版本 | v0.5 |
+
 ## 公众号系列
 
 - 系列名：「零基础用AI做游戏」
 - 统一封面图：`assets/series/cover.png`
 - 每日进度记录在 `DEVLOG.md`
+- 文章草稿在 `docs/articles/`
+
+| 天数 | 标题 | 链接 |
+|------|------|------|
+| Day 1 | 从零开始，一天搞出100多张图 | https://mp.weixin.qq.com/s/JsK1kH8ZldzvwnIEKJ0img |
+| Day 2 | 一天写出完整的吸血鬼幸存者核心玩法 | https://mp.weixin.qq.com/s/ioHKVoApHQ5Sw0XPwmy_yQ |
+| Day 3 | Boss战、序幕CG、收徒系统全部上线 | https://mp.weixin.qq.com/s/u7oEc-UwhQqhKut3jG1MQw |
+| Day 4 | AI状态机、技能进化、暴击系统、代码重构 | https://mp.weixin.qq.com/s/L0tWptd4UbL9IBervWoc2A |
+| Day 5 | 程序化音效、宝箱法器、白龙马剧情重做 | https://mp.weixin.qq.com/s/iB__LPwymy4Ri1SCts9WbQ |
+| Day 6 | 地图扩大4倍，Boss从3变6，AI一天写了8个新系统 | 草稿箱待发 |
+
+## Day 7 开发方向（待确认）
+
+- [ ] **章节关卡制** — 81难分章节，每章不同 Boss 组合，难度递增，章节间过场
+- [ ] **Boss 专属 sprite sheet** — 28 个 Boss 图已有（assets/sprites/enemies/bosses/），需切图脚本接入动画
+- [ ] **剧情回放/CG 画廊** — 查看已解锁的剧情和收徒 CG

@@ -18,7 +18,7 @@ export const XP = {
 };
 
 export { WUKONG, WUKONG_AI, BAJIE, BAJIE_AI, WUJING, WUJING_AI, BAILONGMA, DISCIPLE } from "./HeroConfig";
-export { ENEMY_TYPES, ELITE_CHANCE, ELITE_MULTIPLIER, SPAWNER } from "./EnemyConfig";
+export { ENEMY_TYPES, ALL_ENEMY_TYPES, getStageEnemyTypes, ELITE_CHANCE, ELITE_MULTIPLIER, SPAWNER } from "./EnemyConfig";
 export type { EnemyBehavior, EnemyTypeConfig } from "./EnemyConfig";
 export { UPGRADES, SOLO_UPGRADES, SKILL_HERO, defaultUpgradeState } from "./UpgradeConfig";
 export type { UpgradeState, UpgradeOption } from "./UpgradeConfig";

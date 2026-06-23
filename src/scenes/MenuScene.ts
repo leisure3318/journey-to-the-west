@@ -6,7 +6,7 @@ import { saveSystem } from "../systems/SaveSystem";
 const PROLOGUE: CutsceneConfig = {
   id: "prologue",
   skippable: true,
-  nextScene: "GameScene",
+  nextScene: "StageSelectScene",
   pages: [
     {
       image: "prologue_01_court",
@@ -129,9 +129,26 @@ export class MenuScene extends Phaser.Scene {
 
     startBtn.on("pointerover", () => startBtn.setStyle({ color: "#ffdd44" }));
     startBtn.on("pointerout", () => startBtn.setStyle({ color: "#ffffff" }));
-    startBtn.on("pointerdown", () => { this.soundMgr.menuClick(); this.soundMgr.stopBgm(); this.scene.start("CutsceneScene", PROLOGUE); });
+    startBtn.on("pointerdown", () => {
+      this.soundMgr.menuClick();
+      this.soundMgr.stopBgm();
+      if (!saveSystem.prologueSeen) {
+        saveSystem.markPrologueSeen();
+        this.scene.start("CutsceneScene", PROLOGUE);
+      } else {
+        this.scene.start("StageSelectScene");
+      }
+    });
 
-    this.add.text(400, 578, "WASD / 方向键 / 鼠标  |  ESC 暂停", {
+    const galleryBtn = this.add.text(700, 535, "CG画廊", {
+      fontSize: "16px", color: "#ccaa66",
+      stroke: "#000000", strokeThickness: 3,
+    }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(20);
+    galleryBtn.on("pointerover", () => galleryBtn.setColor("#ffdd88"));
+    galleryBtn.on("pointerout", () => galleryBtn.setColor("#ccaa66"));
+    galleryBtn.on("pointerdown", () => { this.soundMgr.menuClick(); this.soundMgr.stopBgm(); this.scene.start("GalleryScene"); });
+
+    this.add.text(400, 578, "WASD移动 | Q/右键 大招 | 1-9 道具 | M静音 | ESC暂停", {
       fontSize: "12px", color: "#999999",
     }).setOrigin(0.5).setDepth(20);
 

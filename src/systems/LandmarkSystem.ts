@@ -34,26 +34,26 @@ export class LandmarkSystem {
   private drawPOI(poi: POIConfig) {
     const imgKey = POI_IMAGE_MAP[poi.id];
     if (imgKey && this.scene.textures.exists(imgKey)) {
-      const src = this.scene.textures.get(imgKey).getSourceImage() as HTMLImageElement;
-      const cs = 512;
+      const cs = 256;
       const canvasKey = `poi_faded_${poi.id}`;
-      const ct = this.scene.textures.createCanvas(canvasKey, cs, cs);
-      const ctx = ct.context;
-
-      const crop = Math.min(src.width, src.height);
-      ctx.drawImage(src, (src.width - crop) / 2, (src.height - crop) / 2, crop, crop, 0, 0, cs, cs);
-
-      ctx.globalCompositeOperation = "destination-out";
-      const half = cs / 2;
-      const grad = ctx.createRadialGradient(half, half, half * 0.4, half, half, half);
-      grad.addColorStop(0, "rgba(0,0,0,0)");
-      grad.addColorStop(0.55, "rgba(0,0,0,0.35)");
-      grad.addColorStop(0.85, "rgba(0,0,0,0.8)");
-      grad.addColorStop(1, "rgba(0,0,0,1)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, cs, cs);
-      ctx.globalCompositeOperation = "source-over";
-      ct.refresh();
+      if (!this.scene.textures.exists(canvasKey)) {
+        const src = this.scene.textures.get(imgKey).getSourceImage() as HTMLImageElement;
+        const ct = this.scene.textures.createCanvas(canvasKey, cs, cs);
+        const ctx = ct.context;
+        const crop = Math.min(src.width, src.height);
+        ctx.drawImage(src, (src.width - crop) / 2, (src.height - crop) / 2, crop, crop, 0, 0, cs, cs);
+        ctx.globalCompositeOperation = "destination-out";
+        const half = cs / 2;
+        const grad = ctx.createRadialGradient(half, half, half * 0.4, half, half, half);
+        grad.addColorStop(0, "rgba(0,0,0,0)");
+        grad.addColorStop(0.55, "rgba(0,0,0,0.35)");
+        grad.addColorStop(0.85, "rgba(0,0,0,0.8)");
+        grad.addColorStop(1, "rgba(0,0,0,1)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, cs, cs);
+        ctx.globalCompositeOperation = "source-over";
+        ct.refresh();
+      }
 
       const targetW = poi.radius * 2.4;
       const img = this.scene.add.image(poi.x, poi.y, canvasKey)

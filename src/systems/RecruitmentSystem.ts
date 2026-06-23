@@ -39,6 +39,13 @@ export class RecruitmentSystem {
     return this.recruited.has(key);
   }
 
+  markRecruited(key: string) {
+    this.recruited.add(key);
+    const idx = this.recruitPOIs.findIndex(p => p.recruitKey === key);
+    if (idx >= 0 && idx < this.nextIndex) return;
+    if (idx >= 0) this.nextIndex = Math.max(this.nextIndex, idx + 1);
+  }
+
   private createIndicator() {
     this.indicator = this.scene.add.text(400, 50, "", {
       fontSize: "13px", color: "#ffdd44",

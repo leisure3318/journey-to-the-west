@@ -29,12 +29,12 @@ export class MiniMap {
     this.gfx.fillRect(MAP_X - 2, MAP_Y - 2, MAP_W + 4, MAP_H + 4);
 
     const grid = fog.getRevealedGrid();
-    const cellW = MAP_W / FogOfWar.getCols();
-    const cellH = MAP_H / FogOfWar.getRows();
+    const cellW = MAP_W / fog.getCols();
+    const cellH = MAP_H / fog.getRows();
     const fogCell = FogOfWar.getCellSize();
 
-    for (let y = 0; y < FogOfWar.getRows(); y++) {
-      for (let x = 0; x < FogOfWar.getCols(); x++) {
+    for (let y = 0; y < fog.getRows(); y++) {
+      for (let x = 0; x < fog.getCols(); x++) {
         if (grid[y][x]) {
           const worldX = x * fogCell + fogCell / 2;
           const worldY = y * fogCell + fogCell / 2;

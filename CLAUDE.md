@@ -32,26 +32,30 @@ export IMAGE_API_BASE="your-api-base-url"
 ## 架构概览
 
 ```
-GameScene（纯协调层，不含业务逻辑）
+场景流程: MenuScene → StageSelectScene → GameScene → StageResultPanel → 下一关/选关
+         MenuScene → GalleryScene（CG画廊）
+
+GameScene（纯协调层，接收 stageIndex + carryOver 状态）
+  ├── StageConfig（9大关配置：地形/Boss/敌人/难度倍率）
   ├── Player（唐僧）
   ├── DiscipleManager → WukongAI / BajieAI / WujingAI + CloneSystem + UltimateSystem + WujingAbilities
-  ├── EnemySpawner → Enemy 群（渐进增强：HP/伤害/速度随时间持续提升）
-  ├── BossSystem → Boss（6个Boss分布在5个区域）
+  ├── EnemySpawner → Enemy 群（按大关配置敌人种类+难度倍率）
+  ├── BossSystem → Boss（小Boss POI触发 + 终极Boss全灭后降临）
   ├── BossLootSystem（击杀Boss掉落随机永久宝物）
   ├── CombatSystem（投射物/VFX/伤害/血条）
-  ├── ExperienceSystem（经验珠 → 升级）
-  ├── RecruitmentSystem（收徒 POI）
+  ├── ExperienceSystem（经验珠 → 升级，支持跨关继承）
+  ├── RecruitmentSystem（收徒 POI，支持预招募）
   ├── ChestSystem → ItemBar（宝箱 → 物品栏）
   ├── TangsengSkills（紧箍咒/大慈悲）
   ├── DragonTrail（龙息尾迹）
   ├── EvolutionSystem（技能进化配方）
-  ├── TerrainSystem（5种地形区域渲染）
-  ├── ObstacleSystem（70个可碰撞障碍物，按区域分布）
+  ├── TerrainSystem（支持单地形覆盖 + 多区域渲染）
+  ├── ObstacleSystem（可碰撞障碍物，按区域分布）
   ├── BiomeEffects（区域环境粒子+色调叠层）
-  ├── SpatialGrid（200px网格空间分区，光环/范围查询优化）
-  ├── SaveSystem（localStorage存档：记录/统计/音量）
+  ├── SpatialGrid（200px网格空间分区）
+  ├── SaveSystem（localStorage：大关进度/星级/统计/音量）
   ├── FogOfWar / DecorationSystem / LandmarkSystem
-  └── UI: HUD / LevelUpPanel / SkillBar / MiniMap / ItemBar / RelicBar / VirtualJoystick / PauseMenu / GameOverPanel / VictoryPanel
+  └── UI: HUD / LevelUpPanel / SkillBar / MiniMap / ItemBar / RelicBar / VirtualJoystick / PauseMenu / GameOverPanel / StageResultPanel
 ```
 
 ### 核心设计模式
@@ -92,13 +96,14 @@ src/
 ├── config/
 │   ├── GameConfig.ts            # 核心常量(WORLD/PLAYER/XP) + 统一re-export
 │   ├── HeroConfig.ts            # 英雄属性 + AI参数(悟空/八戒/沙僧/白龙马)
-│   ├── EnemyConfig.ts           # 敌人类型表 + 刷怪阶段配置
-│   ├── MapConfig.ts             # POI配置 + Boss类型表 + 地图生成
+│   ├── EnemyConfig.ts            # 29种敌人类型 + 刷怪阶段配置 + getStageEnemyTypes()
+│   ├── MapConfig.ts             # POI配置 + 28种Boss类型 + 地图生成 + generateStagePOIs()
+│   ├── StageConfig.ts           # 9大关定义（地形/Boss/敌人/难度） + CarryOverState
 │   └── UpgradeConfig.ts         # 19个升级+4个单人升级 + 技能-英雄映射 + UpgradeState
 ├── entities/
 │   ├── Player.ts                # 唐僧：移动、HP、护盾、骑马、受伤飘字
 │   ├── Disciple.ts              # 徒弟：三种攻击(arc/area/projectile) + tryAttackTarget
-│   ├── Boss.ts                  # Boss：多阶段AI(chase/charge/spin/rest)、防重复死亡
+│   ├── Boss.ts                  # Boss(Sprite)：多阶段AI + 动画支持（静态图降级）
 │   └── Enemy.ts                 # 敌人：追踪/远程/爆炸三种行为、击退
 ├── systems/
 │   ├── DiscipleManager.ts       # 徒弟协调层：调度AI+子系统
@@ -113,9 +118,9 @@ src/
 │   ├── ChestSystem.ts           # 宝箱：8-12个/局，3tier掉落(55%/30%/15%)，15种物品
 │   ├── SoundManager.ts          # 程序化音效（Web Audio API，25种音效+BGM，M键静音）
 │   ├── EvolutionSystem.ts       # 技能进化：5个配方检测+合成
-│   ├── BossSystem.ts            # Boss生成/碰撞/击败流程
+│   ├── BossSystem.ts            # Boss生成/碰撞/击败 + 终极Boss降临
 │   ├── CombatSystem.ts          # 投射物/攻击VFX/伤害飘字(含暴击)/敌人血条
-│   ├── EnemySpawner.ts          # 刷怪（4阶段密度递增，6种敌人按阶段解锁）
+│   ├── EnemySpawner.ts          # 刷怪（4阶段密度递增，支持大关专属敌人+难度倍率）
 │   ├── ExperienceSystem.ts      # 经验珠吸附(发光脉冲动画) + 升级触发
 │   ├── RecruitmentSystem.ts     # 收徒系统（POI触发）
 │   ├── TerrainSystem.ts          # 地形区域渲染（5种区域+地面细节）
@@ -136,20 +141,23 @@ src/
 │   ├── MiniMap.ts               # 右上角小地图（区域颜色+迷雾+POI+宝箱+玩家位置）
 │   ├── RelicBar.ts              # 右侧宝物栏（Boss掉落宝物图标+tooltip）
 │   ├── VirtualJoystick.ts       # 移动端虚拟摇杆（触摸设备自动启用）
-│   ├── VictoryPanel.ts          # 通关画面
+│   ├── VictoryPanel.ts          # 通关画面（旧模式兼容）
+│   ├── StageResultPanel.ts      # 大关通关结算（星级评分+下一关/重玩/选关）
 │   ├── PauseMenu.ts             # ESC暂停/恢复
-│   └── GameOverPanel.ts         # 游戏结束画面（统计+重开）
+│   └── GameOverPanel.ts         # 游戏结束画面（统计+重开+选关）
 ├── scenes/
-│   ├── BootScene.ts             # 资源加载 + 动画注册 + 程序化纹理（含宝箱）
-│   ├── MenuScene.ts             # 主菜单（山水画背景+师徒行走）
+│   ├── BootScene.ts             # 资源加载 + 动画注册 + 程序化纹理 + Boss sprite sheet
+│   ├── MenuScene.ts             # 主菜单（山水画背景+师徒行走+CG画廊入口）
 │   ├── CutsceneScene.ts         # 序幕CG（贞观十三年...）
-│   └── GameScene.ts             # 纯系统协调层（~266行）
+│   ├── StageSelectScene.ts      # 选关界面（3×3网格，锁/解锁/星级）
+│   ├── GalleryScene.ts          # CG画廊（序幕/收徒/降妖，解锁机制）
+│   └── GameScene.ts             # 纯系统协调层（接收大关配置+状态继承）
 └── main.ts                      # Phaser 启动入口 + 全局错误捕获
 
 assets/
 ├── sprites/heroes/sliced_v3/    # 英雄切图输出（128×128帧）
 ├── sprites/enemies/common/      # 30 种普通小怪（已压缩至192px）
-├── sprites/enemies/bosses/      # 28 个 Boss（已压缩至384px）
+├── sprites/enemies/bosses/      # 28 个 Boss（已压缩至384px）+ sheets/ 子目录放 sprite sheet
 ├── portraits/                   # 角色肖像（原始尺寸，未加载）
 ├── skills/vfx/                  # 20 张技能特效（已压缩至256px）
 ├── skills/icons/                # 19 张技能图标（已压缩至128px）
@@ -166,6 +174,8 @@ scripts/
 ├── generate_all_enemies.py      # 批量生成敌人图片（58张）
 ├── generate_riding_sprite.py    # 生成骑马唐僧sprite
 ├── generate_remaining_cg.py     # 生成剩余CG
+├── generate_boss_sprites.py     # 批量生成Boss sprite sheet（28个Boss提示词）
+├── slice_boss_sprites.py        # Boss sprite sheet 切图（4×5网格→256×256帧）
 └── optimize_assets.sh           # 图片批量压缩（270MB→15MB）
 
 docs/
@@ -180,14 +190,16 @@ docs/
 
 | 文件 | 用途 |
 |------|------|
-| src/config/GameConfig.ts | 核心常量(WORLD 6400×4800, PLAYER, XP) + 统一 re-export 入口 |
-| src/config/HeroConfig.ts | 英雄数值 + AI 参数 |
-| src/config/UpgradeConfig.ts | 19个升级+4个单人升级 + UpgradeState 接口 + defaultUpgradeState() |
-| src/scenes/GameScene.ts | 核心游戏场景（纯协调层，~266行） |
-| src/scenes/BootScene.ts | 资源加载 + 动画注册 + 程序化纹理生成 |
-| src/systems/DiscipleManager.ts | 徒弟管理协调层（~244行） |
-| src/systems/ChestSystem.ts | 宝箱系统 + CHEST_ITEMS 掉落表（15物品） |
-| src/ui/ItemBar.ts | 底部物品栏（堆叠、数字键、点击使用） |
+| src/config/GameConfig.ts | 核心常量(WORLD, PLAYER, XP) + 统一 re-export 入口 |
+| src/config/StageConfig.ts | 9 大关定义 + CarryOverState 接口 |
+| src/config/MapConfig.ts | 28 种 Boss 类型 + generateStagePOIs() |
+| src/config/EnemyConfig.ts | 29 种敌人 + getStageEnemyTypes() |
+| src/scenes/GameScene.ts | 核心游戏场景（接收大关配置+状态继承） |
+| src/scenes/StageSelectScene.ts | 选关界面（3×3 网格） |
+| src/scenes/GalleryScene.ts | CG 画廊（14 张 CG） |
+| src/systems/BossSystem.ts | Boss 生成 + 终极 Boss 降临 |
+| src/systems/SaveSystem.ts | 大关进度/星级/统计持久化 |
+| src/ui/StageResultPanel.ts | 通关结算（星级+继承+下一关） |
 
 ## 已实现功能
 
@@ -228,12 +240,21 @@ docs/
 - [x] 区域环境效果（火域飘火/沙漠风沙/沼泽雾气/森林落叶+色调叠层）
 - [x] 存档系统（localStorage：最佳记录/Boss 进度/音量持久化）
 - [x] 空间分区碰撞（SpatialGrid 200px 网格，光环查询 O(nearby) 替代 O(all)）
+- [x] 9 大关系统（出长安→雷音古刹，难度 ×1.0→×5.0，每关独立地形/敌人/Boss）
+- [x] 选关界面（3×3 网格，锁/解锁/星级评分/难度显示）
+- [x] 终极 Boss（打完所有小 Boss 后牛魔王降临，震屏+红色警告）
+- [x] 通关星级评分（★★★ >50%HP / ★★ >20%HP / ★ 险胜）
+- [x] 跨关状态继承（升级/技能/等级/徒弟/宝物 全部带入下一关）
+- [x] 28 种 Boss 全部配置（数值/纹理/POI 名称/剧情台词）
+- [x] 29 种敌人全部配置（每关独立敌人组合）
+- [x] Boss 动画框架（Sprite 动画 + 静态图降级，生成/切图脚本就绪）
+- [x] CG 画廊（14 张 CG，序幕/收徒/降妖 3 类，解锁机制）
 
-## 待开发功能（按优先级）
+## 待开发功能
 
-- [ ] **章节关卡制** — 81难分章节，难度递增，章节间过场
-- [ ] **Boss 专属 sprite sheet** — 28 个 Boss 图已有，需切图接入动画
-- [ ] **剧情回放** — 查看已解锁的剧情/CG
+- [ ] **Boss sprite sheet 生成** — 运行 generate_boss_sprites.py 生成 28 个 Boss 动画
+- [ ] **第 2-9 关实际游玩平衡** — 敌人数值/Boss 难度微调
+- [ ] **章节间过场剧情** — 每关通关后的叙事文本/CG
 
 ## 添加新系统的步骤
 
@@ -272,15 +293,18 @@ docs/
 - **类型安全**：不要 any 满天飞
 - **常量集中管理**：数值放 config 文件，不要硬编码
 
-## 项目统计（Day 6 结束）
+## 项目统计（Day 7 结束）
 
 | 指标 | 数值 |
 |------|------|
-| TypeScript 文件 | 52 个 |
-| 总代码行数 | ~22,000 行 |
+| TypeScript 文件 | 57 个 |
+| 总代码行数 | ~25,000 行 |
 | 图片资产 | 129 张（15MB） |
+| Boss 类型 | 28 种 |
+| 敌人类型 | 29 种 |
+| 大关数量 | 9 关 |
 | 外部音频文件 | 0 个 |
-| 版本 | v0.5 |
+| 版本 | v0.6 |
 
 ## 公众号系列
 
@@ -298,8 +322,8 @@ docs/
 | Day 5 | 程序化音效、宝箱法器、白龙马剧情重做 | https://mp.weixin.qq.com/s/iB__LPwymy4Ri1SCts9WbQ |
 | Day 6 | 地图扩大4倍，Boss从3变6，AI一天写了8个新系统 | 草稿箱待发 |
 
-## Day 7 开发方向（待确认）
+## Day 7 完成内容
 
-- [ ] **章节关卡制** — 81难分章节，每章不同 Boss 组合，难度递增，章节间过场
-- [ ] **Boss 专属 sprite sheet** — 28 个 Boss 图已有（assets/sprites/enemies/bosses/），需切图脚本接入动画
-- [ ] **剧情回放/CG 画廊** — 查看已解锁的剧情和收徒 CG
+- [x] **9 大关系统** — 选关界面 + 终极 Boss + 星级评分 + 状态继承
+- [x] **Boss 动画框架** — Sprite 动画支持 + 生成/切图脚本 + 静态图降级
+- [x] **CG 画廊** — 14 张 CG，3 类解锁，全屏预览

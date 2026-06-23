@@ -88,6 +88,12 @@ export class BiomeEffects {
     }
   }
 
+  destroy() {
+    this.gfx.destroy();
+    this.overlay.destroy();
+    this.particles.length = 0;
+  }
+
   private drawParticles() {
     this.gfx.clear();
     for (const p of this.particles) {

@@ -233,6 +233,53 @@
 
 ---
 
+## Day 7 — 2026-06-23
+
+**标题：** 9 大关系统 + Boss 动画框架 + CG 画廊
+
+**完成事项：**
+- [x] 9 大关系统（出长安→雷音古刹），难度 ×1.0 → ×5.0
+  - StageConfig 定义 9 个大关（地形/Boss 组合/敌人种类/难度倍率/地图尺寸）
+  - 选关界面 StageSelectScene（3×3 网格，锁/解锁/★星级/难度标签）
+  - 每大关结束后星级评分（★★★ >50%HP / ★★ >20%HP / ★ 险胜）
+  - 终极 Boss：打完所有小 Boss → 牛魔王降临（震屏+红色警告+"终极之战"）
+  - 跨关状态完整继承（UpgradeState/等级/XP/徒弟/宝物）
+  - CarryOverState 通过 Phaser scene data 传递
+  - StageResultPanel 通关结算（下一关/重玩/选关 三个按钮）
+  - GameOverPanel 增加"选关"按钮
+- [x] 28 种 Boss 全部配置到 BOSS_TYPES（名称/纹理/HP/伤害/速度/缩放）
+- [x] 29 种敌人全部配置到 ALL_ENEMY_TYPES + getStageEnemyTypes()
+- [x] BootScene 加载全部 28 个 Boss + 30 个敌人纹理
+- [x] MapConfig 新增 generateStagePOIs()（按大关配置生成 Boss/收徒 POI）
+- [x] EnemySpawner 支持大关专属敌人种类 + 难度倍率
+- [x] BossSystem 重构：小 Boss POI 触发 + 终极 Boss 逻辑 + 难度缩放
+- [x] DiscipleManager.preRecruit() 支持跨关预招募
+- [x] ExperienceSystem.restore() 支持等级/XP 继承
+- [x] RecruitmentSystem.markRecruited() 支持预标记
+- [x] TerrainSystem 支持单地形覆盖（biomeOverride）
+- [x] FogOfWar 改为实例级维度计算（支持不同地图尺寸）
+- [x] SaveSystem 新增大关进度/星级/prologueSeen
+- [x] MenuScene 路由：首次→序幕→选关，之后→选关；新增 CG 画廊入口
+- [x] Boss.ts 改为 Sprite（支持 sprite sheet 动画 + 静态图降级）
+- [x] 生成脚本 generate_boss_sprites.py（28 个 Boss 的 GPT Image 2 提示词）
+- [x] 切图脚本 slice_boss_sprites.py（4×5 网格→256×256 帧）
+- [x] BootScene 支持 BOSS_SHEET_KEYS 动态加载 Boss sprite sheet + 注册动画
+- [x] CG 画廊 GalleryScene（14 张 CG，序幕/收徒/降妖 3 个分类）
+  - 解锁机制绑定 SaveSystem（序幕→prologueSeen，收徒→大关进度，降妖→Boss 击杀记录）
+  - 缩略图网格 + 点击全屏预览（标题+描述+关闭）
+
+**代码变更统计：**
+- 新增文件 7 个：StageConfig.ts, StageSelectScene.ts, StageResultPanel.ts, GalleryScene.ts, generate_boss_sprites.py, slice_boss_sprites.py
+- 修改文件 14 个：GameScene.ts, BossSystem.ts, Boss.ts, EnemySpawner.ts, EnemyConfig.ts, MapConfig.ts, GameConfig.ts, BootScene.ts, MenuScene.ts, main.ts, SaveSystem.ts, FogOfWar.ts, TerrainSystem.ts, DiscipleManager.ts, ExperienceSystem.ts, RecruitmentSystem.ts, GameOverPanel.ts, MiniMap.ts
+- 总代码量：57 个 TypeScript 文件，~25000 行
+
+**未开始的事项：**
+- [ ] 运行 generate_boss_sprites.py 实际生成 28 个 Boss sprite sheet
+- [ ] 第 2-9 关游玩平衡（敌人数值/Boss 难度微调）
+- [ ] 章节间过场剧情文本/CG
+
+---
+
 <!-- 
 模板（复制到下方新增）：
 

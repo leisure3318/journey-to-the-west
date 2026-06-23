@@ -11,7 +11,7 @@ export interface BossConfig {
 
 type BossPhase = "chase" | "charge" | "spin" | "rest";
 
-export class Boss extends Phaser.GameObjects.Image {
+export class Boss extends Phaser.GameObjects.Sprite {
   bossName: string;
   hp: number;
   maxHp: number;
@@ -23,9 +23,12 @@ export class Boss extends Phaser.GameObjects.Image {
   private chargeTarget = { x: 0, y: 0 };
   private spinAngle = 0;
   private dying = false;
+  private animated = false;
+  private textureKey: string;
 
   constructor(scene: Phaser.Scene, x: number, y: number, config: BossConfig) {
     super(scene, x, y, config.texture);
+    this.textureKey = config.texture;
     this.bossName = config.name;
     this.maxHp = config.maxHp;
     this.hp = config.maxHp;
@@ -33,6 +36,10 @@ export class Boss extends Phaser.GameObjects.Image {
     this.speed = config.speed;
     this.setScale(config.scale);
     this.dying = false;
+    this.animated = scene.anims.exists(`${config.texture}_down_walk`);
+    if (this.animated) {
+      this.play(`${config.texture}_down_idle`);
+    }
   }
 
   initBody() {
@@ -73,7 +80,24 @@ export class Boss extends Phaser.GameObjects.Image {
         break;
     }
 
-    this.flipX = body.velocity.x < 0;
+    this.updateAnim(body);
+  }
+
+  private updateAnim(body: Phaser.Physics.Arcade.Body) {
+    if (this.animated) {
+      const vx = body.velocity.x, vy = body.velocity.y;
+      const moving = Math.abs(vx) > 5 || Math.abs(vy) > 5;
+      let dir: string;
+      if (moving) {
+        dir = Math.abs(vx) > Math.abs(vy) ? (vx > 0 ? "right" : "left") : (vy > 0 ? "down" : "up");
+      } else {
+        dir = "down";
+      }
+      const key = `${this.textureKey}_${dir}_${moving ? "walk" : "idle"}`;
+      if (this.anims.currentAnim?.key !== key) this.play(key);
+    } else {
+      this.flipX = (this.getBody()?.velocity.x ?? 0) < 0;
+    }
   }
 
   private enterPhase(next: BossPhase, playerX: number, playerY: number) {

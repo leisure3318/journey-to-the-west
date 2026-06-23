@@ -30,9 +30,13 @@ import { BiomeEffects } from "../systems/BiomeEffects";
 import { SpatialGrid } from "../systems/SpatialGrid";
 import { RelicBar } from "../ui/RelicBar";
 import { VirtualJoystick } from "../ui/VirtualJoystick";
+import { StageResultPanel } from "../ui/StageResultPanel";
 import { WORLD, SOLO_UPGRADES, UpgradeState, UpgradeOption, defaultUpgradeState } from "../config/GameConfig";
+import { getStageEnemyTypes } from "../config/EnemyConfig";
 import { saveSystem } from "../systems/SaveSystem";
-import { generatePOIs } from "../config/MapConfig";
+import { generatePOIs, generateStagePOIs } from "../config/MapConfig";
+import { STAGES, StageDef, CarryOverState } from "../config/StageConfig";
+import { Relic } from "../systems/BossLootSystem";
 
 export class GameScene extends Phaser.Scene {
   private player!: Player;
@@ -66,25 +70,71 @@ export class GameScene extends Phaser.Scene {
   private gameOver = false;
   private upgrades!: UpgradeState;
   private bossesKilled: string[] = [];
+  private relics: Relic[] = [];
+
+  private stage?: StageDef;
+  private carryOver?: CarryOverState;
+  private totalElapsedMs = 0;
+  private totalKills = 0;
 
   constructor() { super("GameScene"); }
 
+  init(data: { stageIndex?: number; carryOver?: CarryOverState }) {
+    if (data.stageIndex != null && data.stageIndex < STAGES.length) {
+      this.stage = STAGES[data.stageIndex];
+      this.carryOver = data.carryOver;
+    } else {
+      this.stage = STAGES[0];
+      this.carryOver = undefined;
+    }
+  }
+
   create() {
-    this.upgrades = defaultUpgradeState();
+    const stage = this.stage!;
+    WORLD.width = stage.mapWidth;
+    WORLD.height = stage.mapHeight;
+
+    if (this.carryOver) {
+      this.upgrades = { ...this.carryOver.upgrades };
+      this.totalElapsedMs = this.carryOver.totalElapsedMs;
+      this.totalKills = this.carryOver.totalKills;
+      this.relics = [...this.carryOver.relics];
+    } else {
+      this.upgrades = defaultUpgradeState();
+      this.totalElapsedMs = 0;
+      this.totalKills = 0;
+      this.relics = [];
+    }
     this.kills = 0; this.pendingLevelUps = 0; this.gameOver = false; this.bossesKilled = [];
+
     const cx = WORLD.width / 2, cy = WORLD.height / 2;
     this.physics.world.setBounds(-200, -200, WORLD.width + 400, WORLD.height + 400);
     this.cameras.main.setBounds(0, 0, WORLD.width, WORLD.height);
-    new TerrainSystem(this);
+    new TerrainSystem(this, stage.biome);
 
     this.player = new Player(this, cx, cy);
+    if (this.carryOver) {
+      this.player.maxHp = this.upgrades.playerMaxHp;
+      this.player.hp = this.player.maxHp;
+      this.player.moveSpeed = this.upgrades.playerSpeed;
+      this.player.shieldMax = this.upgrades.shieldMax;
+      this.player.shieldHp = this.upgrades.shieldMax;
+    }
     (this.player.body as Phaser.Physics.Arcade.Body).setBoundsRectangle(new Phaser.Geom.Rectangle(0, 0, WORLD.width, WORLD.height));
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
-    const pois = generatePOIs();
+    const pois = generateStagePOIs(stage);
     this.discipleMgr = new DiscipleManager(this, cx, cy);
+
+    if (this.carryOver && this.carryOver.recruitedKeys.length > 0) {
+      this.discipleMgr.preRecruit(this.carryOver.recruitedKeys, cx, cy);
+    }
+
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: false });
-    this.spawner = new EnemySpawner(this, this.enemies);
+
+    const stageEnemies = getStageEnemyTypes(stage.enemyIds);
+    this.spawner = new EnemySpawner(this, this.enemies, stageEnemies, stage.difficulty);
+
     this.combat = new CombatSystem(this, this.enemies);
     new DecorationSystem(this);
     const obstacles = new ObstacleSystem(this);
@@ -96,7 +146,20 @@ export class GameScene extends Phaser.Scene {
     this.recruitment = new RecruitmentSystem(this, pois, (poi) => { this.discipleMgr.recruit(poi, this.player.x, this.player.y); this.soundMgr.recruit(); });
     this.bossSystem = new BossSystem(this, pois);
     this.bossSystem.setRecruitment(this.recruitment);
+    this.bossSystem.setFinalBoss(stage.finalBossKey);
+    this.bossSystem.setDifficulty(stage.difficulty);
+
+    if (this.carryOver && this.carryOver.recruitedKeys.includes("wukong")) {
+      for (const key of this.carryOver.recruitedKeys) {
+        this.recruitment.markRecruited(key);
+      }
+    }
+
     this.xpSystem = new ExperienceSystem(this, () => this.onLevelUp());
+    if (this.carryOver) {
+      this.xpSystem.restore(this.carryOver.level, this.carryOver.xp, this.carryOver.xpToNext);
+    }
+
     this.miniMap = new MiniMap(this, pois);
 
     this.setupEvents();
@@ -114,6 +177,7 @@ export class GameScene extends Phaser.Scene {
       this.player.moveSpeed = this.upgrades.playerSpeed;
       this.player.shieldMax = this.upgrades.shieldMax;
       this.soundMgr.itemUse();
+      this.showItemEffect(item.name, item.desc, item.tierColor);
     });
     this.chestSystem = new ChestSystem(this, pois, (item) => {
       this.soundMgr.chestOpen();
@@ -122,12 +186,29 @@ export class GameScene extends Phaser.Scene {
       }
     });
     this.relicBar = new RelicBar(this);
+    if (this.relics.length > 0) {
+      for (const r of this.relics) this.relicBar.addRelic(r);
+    }
     const joystick = new VirtualJoystick(this);
     this.player.joystick = joystick;
     this.biomeEffects = new BiomeEffects(this);
     this.spatialGrid = new SpatialGrid(WORLD.width, WORLD.height);
     this.pauseMenu = new PauseMenu(this, () => !this.gameOver && !this.levelUpPanel.isActive(), this.soundMgr, () => this.soundMgr.pause(), () => this.soundMgr.resume());
     this.gameOverPanel = new GameOverPanel(this);
+
+    this.game.canvas.oncontextmenu = (e) => e.preventDefault();
+    this.showStageTitle(stage);
+
+    const ultKey = this.input.keyboard!.addKey("Q");
+    ultKey.on("down", () => {
+      if (this.gameOver || this.levelUpPanel.isActive() || this.pauseMenu.isPaused()) return;
+      this.discipleMgr.tryFireUltimate(this.enemies, this.bossSystem.getBoss());
+    });
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      if (pointer.rightButtonDown() && !this.gameOver && !this.levelUpPanel.isActive() && !this.pauseMenu.isPaused()) {
+        this.discipleMgr.tryFireUltimate(this.enemies, this.bossSystem.getBoss());
+      }
+    });
 
     const muteKey = this.input.keyboard!.addKey("M");
     const muteTxt = this.add.text(20, 575, "", { fontSize: "10px", color: "#888888" })
@@ -148,9 +229,30 @@ export class GameScene extends Phaser.Scene {
     this.soundMgr.startBgm();
   }
 
+  private showStageTitle(stage: StageDef) {
+    const bg = this.add.rectangle(400, 80, 400, 50, 0x000000, 0.7)
+      .setScrollFactor(0).setDepth(950).setAlpha(0);
+    const title = this.add.text(400, 72, stage.title, {
+      fontSize: "22px", color: "#ffdd44", fontStyle: "bold",
+      stroke: "#000000", strokeThickness: 4,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(951).setAlpha(0);
+    const desc = this.add.text(400, 95, stage.description, {
+      fontSize: "12px", color: "#ccccaa",
+      stroke: "#000000", strokeThickness: 2,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(951).setAlpha(0);
+
+    this.tweens.add({ targets: [bg, title, desc], alpha: 1, duration: 500, ease: "Sine.easeOut" });
+    this.time.delayedCall(3000, () => {
+      this.tweens.add({ targets: [bg, title, desc], alpha: 0, duration: 600,
+        onComplete: () => { bg.destroy(); title.destroy(); desc.destroy(); },
+      });
+    });
+  }
+
   private setupEvents() {
     this.events.on("enemy-killed", (x: number, y: number, v: number) => {
       this.kills++;
+      this.totalKills++;
       this.xpSystem.spawnOrb(x, y, v);
       if (this.upgrades.killHeal > 0) this.player.heal(this.upgrades.killHeal);
       this.soundMgr.enemyDeath();
@@ -163,7 +265,7 @@ export class GameScene extends Phaser.Scene {
     });
     this.events.on("boss-killed", () => {
       const bossName = this.bossSystem.getBoss()?.bossName ?? "";
-      const stats = { elapsedMs: this.spawner.getElapsed(), kills: this.kills, level: this.xpSystem.getLevel(), bossName };
+      const stats = { elapsedMs: this.spawner.getElapsed(), kills: this.kills, level: this.xpSystem.getLevel(), bossName, bossesKilled: this.bossesKilled };
       this.bossSystem.onBossKilled(stats);
       this.player.dismountHorse();
       this.discipleMgr.showHorse();
@@ -175,12 +277,17 @@ export class GameScene extends Phaser.Scene {
         this.player.moveSpeed = this.upgrades.playerSpeed;
         this.player.shieldMax = this.upgrades.shieldMax;
         this.relicBar.addRelic(relic);
+        this.relics.push(relic);
         this.showRelicDrop(relic);
       }
-      if (this.bossSystem.isAllDefeated()) { this.gameOver = true; this.soundMgr.victory(); this.soundMgr.stopBgm();
-        this.time.delayedCall(2000, () => new VictoryPanel(this).show({ elapsedMs: this.spawner.getElapsed(), kills: this.kills, level: this.xpSystem.getLevel(), bossName, bossesKilled: this.bossesKilled }));
+      if (this.bossSystem.isFinalBossDefeated()) {
+        this.gameOver = true;
+        this.soundMgr.victory();
+        this.soundMgr.stopBgm();
+        this.time.delayedCall(2000, () => this.showStageResult());
+      } else if (!this.bossSystem.isFinalBossDefeated()) {
+        this.soundMgr.bossDefeat();
       }
-      else { this.soundMgr.bossDefeat(); }
     });
     this.events.on("xp-collected", () => { this.soundMgr.xpPickup(); });
     this.events.on("ultimate-activated", () => { this.soundMgr.ultimate(); });
@@ -228,6 +335,52 @@ export class GameScene extends Phaser.Scene {
         this.player.takeDamage(en.damage, this.upgrades.damageMultiplier); this.soundMgr.playerHit(); this.cameras.main.shake(100, 0.005);
       } catch (e) { console.error("Player-enemy overlap error:", e); }
     });
+
+    this.events.once("shutdown", () => this.cleanup());
+  }
+
+  private cleanup() {
+    this.gameOver = true;
+    const customEvents = [
+      "enemy-killed", "boss-spawned", "boss-killed", "xp-collected",
+      "ultimate-activated", "headband-activated", "mercy-released",
+      "evolution-triggered", "wave-changed", "enemy-damaged",
+      "enemy-trap", "enemy-summon", "enemy-shoot", "enemy-explode",
+    ];
+    for (const e of customEvents) this.events.removeAllListeners(e);
+    this.combat.destroy();
+    this.fog.destroy();
+    this.biomeEffects.destroy();
+    if (this.auraRing) { this.auraRing.destroy(); this.auraRing = undefined; }
+    this.soundMgr.stopBgm();
+    this.enemies.clear(true, true);
+  }
+
+  private showStageResult() {
+    const recruited: string[] = [];
+    for (const key of ["wukong", "bailongma", "bajie", "wujing"]) {
+      if (this.discipleMgr.has(key)) recruited.push(key);
+    }
+    const carry: CarryOverState = {
+      stageIndex: this.stage!.index,
+      upgrades: { ...this.upgrades },
+      recruitedKeys: recruited,
+      level: this.xpSystem.getLevel(),
+      xp: this.xpSystem.getXp(),
+      xpToNext: this.xpSystem.getXpToNext(),
+      totalElapsedMs: this.totalElapsedMs + this.spawner.getElapsed(),
+      totalKills: this.totalKills,
+      relics: [...this.relics],
+    };
+    new StageResultPanel(this).show({
+      stageIndex: this.stage!.index,
+      elapsedMs: this.totalElapsedMs + this.spawner.getElapsed(),
+      kills: this.totalKills,
+      level: this.xpSystem.getLevel(),
+      hpRatio: this.player.hp / this.player.maxHp,
+      bossesKilled: this.bossesKilled,
+      carryOver: carry,
+    });
   }
 
   update(time: number, delta: number) {
@@ -249,7 +402,7 @@ export class GameScene extends Phaser.Scene {
         this.gameOver = true; this.soundMgr.gameOver(); this.soundMgr.stopBgm();
         this.hud.update(0, this.player.maxHp, this.xpSystem.getXp(), this.xpSystem.getXpToNext(),
           this.xpSystem.getLevel(), this.spawner.getElapsed(), this.kills);
-        this.gameOverPanel.show({ elapsedMs: this.spawner.getElapsed(), kills: this.kills, level: this.xpSystem.getLevel(), bossesKilled: this.bossesKilled }); return;
+        this.gameOverPanel.show({ elapsedMs: this.totalElapsedMs + this.spawner.getElapsed(), kills: this.totalKills, level: this.xpSystem.getLevel(), bossesKilled: this.bossesKilled, stageIndex: this.stage?.index }); return;
       }
     }
 
@@ -273,7 +426,7 @@ export class GameScene extends Phaser.Scene {
     this.xpSystem.setAttractRadius(this.upgrades.xpAttractRadius);
     this.xpSystem.update(this.player.x, this.player.y);
     this.spatialGrid.rebuild(this.enemies.getChildren());
-    if (this.upgrades.auraRadius > 0) this.tickAura(delta);
+    if (this.upgrades.auraRadius > 0 && !this.gameOver) this.tickAura(delta);
     this.player.updateShieldVisual();
     this.chestSystem.update(this.player.x, this.player.y, (k) => this.discipleMgr.has(k));
     this.itemBar.update();
@@ -291,7 +444,7 @@ export class GameScene extends Phaser.Scene {
     const cds: CooldownInfo[] = [];
     const ultNames: Record<string, string> = { wukong: "齐天大圣", bajie: "天蓬元帅", wujing: "卷帘大将", bailongma: "龙太子化龙" };
     const ultColors: Record<string, number> = { wukong: 0xff9900, bajie: 0x88cc44, wujing: 0x4488ff, bailongma: 0x88ccff };
-    for (const u of this.discipleMgr.getUltimateCooldowns()) {
+    for (const u of (this.discipleMgr.getUltimateCooldowns() ?? [])) {
       cds.push({ name: ultNames[u.key] ?? u.key, ratio: u.ratio, color: ultColors[u.key] ?? 0xffffff });
     }
     const hbr = this.tangsengSkills.getHeadbandRatio();
@@ -302,7 +455,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private ySortAll() {
-    const objs: Phaser.GameObjects.GameObject[] = [this.player, ...this.discipleMgr.getAll()];
+    const allDisciples = this.discipleMgr.getAll() ?? [];
+    const objs: Phaser.GameObjects.GameObject[] = [this.player, ...allDisciples];
     const boss = this.bossSystem.getBoss();
     if (boss?.active) objs.push(boss);
     for (const child of this.enemies.getChildren()) { if (child.active) objs.push(child); }
@@ -363,7 +517,7 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private showRelicDrop(relic: import("../systems/BossLootSystem").Relic) {
+  private showRelicDrop(relic: Relic) {
     const cx = 400, cy = 200;
     const bg = this.add.rectangle(cx, cy, 260, 90 + relic.buffs.length * 18, 0x1a1a2e, 0.9)
       .setStrokeStyle(2, 0xffaa00).setScrollFactor(0).setDepth(950).setAlpha(0);
@@ -377,13 +531,31 @@ export class GameScene extends Phaser.Scene {
         fontSize: "12px", color: "#66ff66", stroke: "#000000", strokeThickness: 2,
       }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(951).setAlpha(0)
     );
-    const all = [bg, icon, title, ...buffTexts];
+    const all = [bg, icon, title, ...(buffTexts ?? [])];
     this.tweens.add({ targets: all, alpha: 1, duration: 400, ease: "Sine.easeOut" });
     this.time.delayedCall(3500, () => {
       this.tweens.add({ targets: all, alpha: 0, y: "-=20", duration: 600,
         onComplete: () => all.forEach(o => o.destroy()),
       });
     });
+  }
+
+  private showItemEffect(name: string, desc: string, color: number) {
+    const ring = this.add.circle(this.player.x, this.player.y, 10, color, 0.5).setDepth(500);
+    this.tweens.add({ targets: ring, radius: 80, alpha: 0, duration: 500, ease: "Sine.easeOut", onComplete: () => ring.destroy() });
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const p = this.add.circle(this.player.x, this.player.y, 3, color, 0.8).setDepth(501);
+      this.tweens.add({ targets: p, x: this.player.x + Math.cos(a) * 60, y: this.player.y + Math.sin(a) * 60, alpha: 0, scale: 0, duration: 400 + Math.random() * 200, onComplete: () => p.destroy() });
+    }
+    const txt = this.add.text(this.player.x, this.player.y - 40, `${name}`, {
+      fontSize: "14px", color: `#${color.toString(16).padStart(6, "0")}`, fontStyle: "bold",
+      stroke: "#000000", strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(502);
+    const descTxt = this.add.text(this.player.x, this.player.y - 22, desc, {
+      fontSize: "10px", color: "#cccccc", stroke: "#000000", strokeThickness: 2,
+    }).setOrigin(0.5).setDepth(502);
+    this.tweens.add({ targets: [txt, descTxt], y: "-=30", alpha: 0, delay: 800, duration: 600, onComplete: () => { txt.destroy(); descTxt.destroy(); } });
   }
 
   private onLevelUp() { this.pendingLevelUps++; this.soundMgr.levelUp(); if (!this.levelUpPanel.isActive()) this.showNextLevelUp(); }

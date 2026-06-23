@@ -1,5 +1,6 @@
 import Phaser from "phaser";
-import { SPAWNER, ENEMY_TYPES, ELITE_CHANCE, ELITE_MULTIPLIER } from "../config/GameConfig";
+import { SPAWNER, ELITE_CHANCE, ELITE_MULTIPLIER } from "../config/GameConfig";
+import { EnemyTypeConfig, ENEMY_TYPES } from "../config/EnemyConfig";
 import { Enemy } from "../entities/Enemy";
 
 export class EnemySpawner {
@@ -8,10 +9,14 @@ export class EnemySpawner {
   private elapsed = 0;
   private spawnTimer = 0;
   private lastPhaseIdx = 0;
+  private enemyTypes: EnemyTypeConfig[];
+  private difficulty: number;
 
-  constructor(scene: Phaser.Scene, enemies: Phaser.Physics.Arcade.Group) {
+  constructor(scene: Phaser.Scene, enemies: Phaser.Physics.Arcade.Group, enemyTypes?: EnemyTypeConfig[], difficulty = 1) {
     this.scene = scene;
     this.enemies = enemies;
+    this.enemyTypes = enemyTypes ?? ENEMY_TYPES;
+    this.difficulty = difficulty;
   }
 
   update(delta: number) {
@@ -55,7 +60,8 @@ export class EnemySpawner {
 
   private spawnEnemy() {
     const phaseIdx = this.getCurrentPhaseIndex();
-    const available = ENEMY_TYPES.filter((t) => t.minPhase <= phaseIdx);
+    const available = this.enemyTypes.filter((t) => t.minPhase <= phaseIdx);
+    if (available.length === 0) return;
     const cfg = available[Phaser.Math.Between(0, available.length - 1)];
     const pos = this.getSpawnPosition();
 
@@ -66,7 +72,7 @@ export class EnemySpawner {
     }
 
     const isElite = Math.random() < ELITE_CHANCE && phaseIdx >= 1;
-    const statScale = this.getStatScale();
+    const statScale = this.getStatScale() * this.difficulty;
     enemy.spawn(pos.x, pos.y, {
       hp: Math.round((isElite ? cfg.hp * ELITE_MULTIPLIER.hp : cfg.hp) * statScale),
       damage: Math.round((isElite ? cfg.damage * ELITE_MULTIPLIER.damage : cfg.damage) * statScale),
@@ -119,5 +125,9 @@ export class EnemySpawner {
 
   getElapsed(): number {
     return this.elapsed;
+  }
+
+  setElapsed(ms: number) {
+    this.elapsed = ms;
   }
 }

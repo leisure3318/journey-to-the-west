@@ -103,4 +103,10 @@ export class ExperienceSystem {
   getXpToNext(): number {
     return this.xpToNext;
   }
+
+  restore(level: number, xp: number, xpToNext: number) {
+    this.level = level;
+    this.totalXp = xp;
+    this.xpToNext = xpToNext;
+  }
 }

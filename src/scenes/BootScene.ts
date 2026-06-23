@@ -10,7 +10,30 @@ const ENEMY_TEXTURES = [
   { key: "enemy_bear_demon", path: "assets/sprites/enemies/common/bear_demon.png" },
   { key: "enemy_web_spinner", path: "assets/sprites/enemies/common/web_spinner.png" },
   { key: "enemy_tree_demon", path: "assets/sprites/enemies/common/tree_demon.png" },
+  { key: "enemy_wolf", path: "assets/sprites/enemies/common/wolf.png" },
+  { key: "enemy_tiger_demon", path: "assets/sprites/enemies/common/tiger_demon.png" },
+  { key: "enemy_flower_sprite", path: "assets/sprites/enemies/common/flower_sprite.png" },
+  { key: "enemy_centipede_spirit", path: "assets/sprites/enemies/common/centipede_spirit.png" },
+  { key: "enemy_fish_demon", path: "assets/sprites/enemies/common/fish_demon.png" },
+  { key: "enemy_water_ghost", path: "assets/sprites/enemies/common/water_ghost.png" },
+  { key: "enemy_snake_demon", path: "assets/sprites/enemies/common/snake_demon.png" },
+  { key: "enemy_ghost", path: "assets/sprites/enemies/common/ghost.png" },
+  { key: "enemy_sand_spirit", path: "assets/sprites/enemies/common/sand_spirit.png" },
+  { key: "enemy_fire_crow", path: "assets/sprites/enemies/common/fire_crow.png" },
+  { key: "enemy_stone_imp", path: "assets/sprites/enemies/common/stone_imp.png" },
+  { key: "enemy_smoke_demon", path: "assets/sprites/enemies/common/smoke_demon.png" },
+  { key: "enemy_wind_spirit", path: "assets/sprites/enemies/common/wind_spirit.png" },
+  { key: "enemy_bull_spirit", path: "assets/sprites/enemies/common/bull_spirit.png" },
+  { key: "enemy_demon_vanguard", path: "assets/sprites/enemies/common/demon_vanguard.png" },
+  { key: "enemy_bone_general", path: "assets/sprites/enemies/common/bone_general.png" },
+  { key: "enemy_corrupted_soldier", path: "assets/sprites/enemies/common/corrupted_soldier.png" },
+  { key: "enemy_zombie", path: "assets/sprites/enemies/common/zombie.png" },
+  { key: "enemy_wolf_demon", path: "assets/sprites/enemies/common/wolf_demon.png" },
+  { key: "enemy_ice_spirit", path: "assets/sprites/enemies/common/ice_spirit.png" },
+  { key: "enemy_abyss_creature", path: "assets/sprites/enemies/common/abyss_creature.png" },
 ];
+
+const BOSS_SHEET_KEYS: string[] = [];
 
 export class BootScene extends Phaser.Scene {
   constructor() {
@@ -53,7 +76,34 @@ export class BootScene extends Phaser.Scene {
     this.load.image("boss_black_bear", "assets/sprites/enemies/bosses/black_bear_king.png");
     this.load.image("boss_gold_horn", "assets/sprites/enemies/bosses/gold_horn_king.png");
     this.load.image("boss_spider", "assets/sprites/enemies/bosses/spider_sister.png");
+    this.load.image("boss_bull_demon", "assets/sprites/enemies/bosses/bull_demon_king.png");
+    this.load.image("boss_leopard", "assets/sprites/enemies/bosses/leopard_spirit.png");
+    this.load.image("boss_deer", "assets/sprites/enemies/bosses/deer_immortal.png");
+    this.load.image("boss_tiger", "assets/sprites/enemies/bosses/tiger_immortal.png");
+    this.load.image("boss_scorpion", "assets/sprites/enemies/bosses/scorpion_spirit.png");
+    this.load.image("boss_goldfish", "assets/sprites/enemies/bosses/goldfish_king.png");
+    this.load.image("boss_mouse", "assets/sprites/enemies/bosses/mouse_spirit.png");
+    this.load.image("boss_white_deer", "assets/sprites/enemies/bosses/white_deer_spirit.png");
+    this.load.image("boss_hundred_eye", "assets/sprites/enemies/bosses/hundred_eye_demon.png");
+    this.load.image("boss_yellow_robe", "assets/sprites/enemies/bosses/yellow_robe_demon.png");
+    this.load.image("boss_stone_golem", "assets/sprites/enemies/bosses/stone_golem.png");
+    this.load.image("boss_goat", "assets/sprites/enemies/bosses/goat_immortal.png");
+    this.load.image("boss_iron_fan", "assets/sprites/enemies/bosses/iron_fan_princess.png");
+    this.load.image("boss_silver_horn", "assets/sprites/enemies/bosses/silver_horn_king.png");
+    this.load.image("boss_jade_rabbit", "assets/sprites/enemies/bosses/jade_rabbit.png");
+    this.load.image("boss_golden_roc", "assets/sprites/enemies/bosses/golden_roc.png");
+    this.load.image("boss_blue_lion", "assets/sprites/enemies/bosses/blue_lion_demon.png");
+    this.load.image("boss_white_elephant", "assets/sprites/enemies/bosses/white_elephant_demon.png");
+    this.load.image("boss_zhen_yuan", "assets/sprites/enemies/bosses/zhen_yuan.png");
+    this.load.image("boss_rhino_cold", "assets/sprites/enemies/bosses/rhino_cold.png");
+    this.load.image("boss_rhino_dust", "assets/sprites/enemies/bosses/rhino_dust.png");
+    this.load.image("boss_rhino_heat", "assets/sprites/enemies/bosses/rhino_heat.png");
     this.load.image("enemy_fire_spirit", "assets/sprites/enemies/common/fire_spirit.png");
+
+    for (const key of BOSS_SHEET_KEYS) {
+      this.load.spritesheet(`boss_${key}`, `assets/sprites/enemies/bosses/sheets/${key}_sheet.png`,
+        { frameWidth: 256, frameHeight: 256 });
+    }
 
     const skillIcons = [
       "wukong_sweep", "wukong_clone", "wukong_transform", "wukong_fireeyes",
@@ -327,6 +377,24 @@ export class BootScene extends Phaser.Scene {
     eliteRingGfx.fillCircle(16, 16, 14);
     eliteRingGfx.generateTexture("elite_ring", 32, 32);
     eliteRingGfx.destroy();
+
+    for (const key of BOSS_SHEET_KEYS) {
+      const texKey = `boss_${key}`;
+      if (!this.textures.exists(texKey + "_sheet")) continue;
+      const dirs = ["down", "right", "up", "left"];
+      for (let d = 0; d < 4; d++) {
+        this.anims.create({
+          key: `${texKey}_${dirs[d]}_walk`,
+          frames: this.anims.generateFrameNumbers(texKey, { start: d * 5 + 1, end: d * 5 + 4 }),
+          frameRate: 6, repeat: -1,
+        });
+        this.anims.create({
+          key: `${texKey}_${dirs[d]}_idle`,
+          frames: [{ key: texKey, frame: d * 5 }],
+          frameRate: 1,
+        });
+      }
+    }
 
     this.scene.start("MenuScene");
   }

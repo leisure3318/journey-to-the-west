@@ -6,6 +6,7 @@ export interface GameOverStats {
   kills: number;
   level: number;
   bossesKilled: string[];
+  stageIndex?: number;
 }
 
 export class GameOverPanel {
@@ -45,12 +46,23 @@ export class GameOverPanel {
       fontSize: "12px", color: "#888888", align: "center", lineSpacing: 6,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    const restart = this.scene.add.text(340, 390, "[ 再来一次 ]", {
+    const restart = this.scene.add.text(280, 390, "[ 再来一次 ]", {
       fontSize: "20px", color: "#ffdd44",
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
-    restart.on("pointerdown", () => this.scene.scene.restart());
+    restart.on("pointerdown", () => {
+      if (stats.stageIndex != null) {
+        this.scene.scene.start("GameScene", { stageIndex: stats.stageIndex });
+      } else {
+        this.scene.scene.restart();
+      }
+    });
 
-    const menu = this.scene.add.text(460, 390, "[ 主菜单 ]", {
+    const selectBtn = this.scene.add.text(400, 390, "[ 选关 ]", {
+      fontSize: "20px", color: "#aaaaaa",
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
+    selectBtn.on("pointerdown", () => this.scene.scene.start("StageSelectScene"));
+
+    const menu = this.scene.add.text(520, 390, "[ 主菜单 ]", {
       fontSize: "20px", color: "#aaaaaa",
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
     menu.on("pointerdown", () => this.scene.scene.start("MenuScene"));

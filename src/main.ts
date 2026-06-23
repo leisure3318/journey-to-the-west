@@ -2,6 +2,8 @@ import Phaser from "phaser";
 import { BootScene } from "./scenes/BootScene";
 import { MenuScene } from "./scenes/MenuScene";
 import { CutsceneScene } from "./scenes/CutsceneScene";
+import { StageSelectScene } from "./scenes/StageSelectScene";
+import { GalleryScene } from "./scenes/GalleryScene";
 import { GameScene } from "./scenes/GameScene";
 
 const errorDiv = document.createElement("div");
@@ -28,7 +30,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, MenuScene, CutsceneScene, GameScene],
+  scene: [BootScene, MenuScene, CutsceneScene, StageSelectScene, GalleryScene, GameScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -39,4 +41,4 @@ const config: Phaser.Types.Core.GameConfig = {
   },
 };
 
-new Phaser.Game(config);
+(window as any).__PHASER_GAME__ = new Phaser.Game(config);

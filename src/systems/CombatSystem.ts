@@ -161,9 +161,17 @@ export class CombatSystem {
     });
   }
 
+  destroy() {
+    this.dmgPool.forEach(t => t.destroy());
+    this.dmgPool.length = 0;
+    this.enemyHpGfx.destroy();
+    this.projectiles.clear(true, true);
+    if (this.bossCollider) { this.bossCollider.destroy(); this.bossCollider = undefined; }
+  }
+
   private showDamageNumber(x: number, y: number, amount: number, isCrit: boolean) {
     if (amount <= 0) return;
-    const text = this.dmgPool.find(t => !t.active);
+    const text = this.dmgPool.find(t => !t.active && t.canvas);
     if (!text) return;
 
     const fontSize = isCrit ? "26px" : "15px";

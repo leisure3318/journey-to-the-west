@@ -8,6 +8,9 @@ export interface SaveData {
   bossesDefeated: string[];
   totalKills: number;
   volume: number;
+  highestStage: number;
+  stageStars: Record<number, number>;
+  prologueSeen: boolean;
 }
 
 function defaultSave(): SaveData {
@@ -19,6 +22,9 @@ function defaultSave(): SaveData {
     bossesDefeated: [],
     totalKills: 0,
     volume: 1,
+    highestStage: 0,
+    stageStars: {},
+    prologueSeen: false,
   };
 }
 
@@ -47,9 +53,31 @@ export class SaveSystem {
     if (elapsedMs > this.data.bestTimeMs) this.data.bestTimeMs = elapsedMs;
     if (kills > this.data.bestKills) this.data.bestKills = kills;
     if (level > this.data.bestLevel) this.data.bestLevel = level;
-    for (const b of bossesKilled) {
+    for (const b of (bossesKilled ?? [])) {
       if (!this.data.bossesDefeated.includes(b)) this.data.bossesDefeated.push(b);
     }
+    this.save();
+  }
+
+  clearStage(stageIndex: number, stars: number) {
+    const prev = this.data.stageStars[stageIndex] ?? 0;
+    if (stars > prev) this.data.stageStars[stageIndex] = stars;
+    if (stageIndex >= this.data.highestStage) {
+      this.data.highestStage = stageIndex + 1;
+    }
+    this.save();
+  }
+
+  getStageStars(stageIndex: number): number {
+    return this.data.stageStars[stageIndex] ?? 0;
+  }
+
+  isStageUnlocked(stageIndex: number): boolean {
+    return stageIndex <= this.data.highestStage;
+  }
+
+  markPrologueSeen() {
+    this.data.prologueSeen = true;
     this.save();
   }
 
@@ -65,6 +93,8 @@ export class SaveSystem {
   get bestLevel() { return this.data.bestLevel; }
   get bossesDefeated() { return this.data.bossesDefeated; }
   get totalKills() { return this.data.totalKills; }
+  get highestStage() { return this.data.highestStage; }
+  get prologueSeen() { return this.data.prologueSeen; }
 
   formatTime(ms: number): string {
     const s = Math.floor(ms / 1000);

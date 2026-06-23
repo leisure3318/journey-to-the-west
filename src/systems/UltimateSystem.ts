@@ -21,25 +21,74 @@ export class UltimateSystem {
     this.cooldowns.set(key, ms);
   }
 
-  update(delta: number, boss: Boss | null, disciples: Map<string, Disciple>) {
+  update(delta: number, _boss: Boss | null, _disciples: Map<string, Disciple>) {
     for (const [key, timer] of this.timers) {
-      const t = timer + delta;
-      this.timers.set(key, t);
       const cd = this.cooldowns.get(key) ?? this.defaultCd;
-      if (t < cd) continue;
-      if (!boss?.active) continue;
-      this.timers.set(key, 0);
+      if (timer < cd) {
+        this.timers.set(key, timer + delta);
+      }
+    }
+  }
+
+  tryFire(disciples: Map<string, Disciple>, enemies: Phaser.Physics.Arcade.Group, activeBoss?: Boss | null): boolean {
+    for (const [key, timer] of this.timers) {
+      const cd = this.cooldowns.get(key) ?? this.defaultCd;
+      if (timer < cd) continue;
       const d = disciples.get(key);
       if (!d) continue;
 
+      this.timers.set(key, 0);
       this.scene.events.emit("ultimate-activated");
-      switch (key) {
-        case "wukong": this.ultWukong(d, boss); break;
-        case "bajie": this.ultBajie(d, boss); break;
-        case "wujing": this.ultWujing(d, boss); break;
-        case "bailongma": this.ultBailongma(d, boss); break;
+
+      if (activeBoss?.active) {
+        switch (key) {
+          case "wukong": this.ultWukong(d, activeBoss); break;
+          case "bajie": this.ultBajie(d, activeBoss); break;
+          case "wujing": this.ultWujing(d, activeBoss); break;
+          case "bailongma": this.ultBailongma(d, activeBoss); break;
+        }
+        return true;
       }
+
+      const nearest = this.findNearestEnemy(d, enemies);
+      const target = nearest ?? d;
+      const fakeBoss = { x: target.x, y: target.y, active: true, takeDamage: (dmg: number) => {
+        for (const child of enemies.getChildren()) {
+          const e = child as any;
+          if (e.active && Phaser.Math.Distance.Between(e.x, e.y, target.x, target.y) <= 200) {
+            e.takeDamage?.(dmg);
+          }
+        }
+      }} as any as Boss;
+
+      switch (key) {
+        case "wukong": this.ultWukong(d, fakeBoss); break;
+        case "bajie": this.ultBajie(d, fakeBoss); break;
+        case "wujing": this.ultWujing(d, fakeBoss); break;
+        case "bailongma": this.ultBailongma(d, fakeBoss); break;
+      }
+      return true;
     }
+    return false;
+  }
+
+  hasReady(): boolean {
+    for (const [key, timer] of this.timers) {
+      const cd = this.cooldowns.get(key) ?? this.defaultCd;
+      if (timer >= cd) return true;
+    }
+    return false;
+  }
+
+  private findNearestEnemy(d: Disciple, enemies: Phaser.Physics.Arcade.Group): Phaser.GameObjects.GameObject | null {
+    let nearest: Phaser.GameObjects.GameObject | null = null;
+    let minDist = Infinity;
+    for (const child of enemies.getChildren()) {
+      if (!child.active) continue;
+      const dist = Phaser.Math.Distance.Between(d.x, d.y, (child as any).x, (child as any).y);
+      if (dist < minDist) { minDist = dist; nearest = child; }
+    }
+    return nearest;
   }
 
   private ultWukong(wukong: Disciple, boss: Boss) {

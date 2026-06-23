@@ -42,6 +42,29 @@ export class DiscipleManager {
     this.map.set("horse", horse);
   }
 
+  preRecruit(keys: string[], px: number, py: number) {
+    for (const key of keys) {
+      if (this.map.has(key)) continue;
+      if (key === "bailongma") {
+        const oldHorse = this.map.get("horse");
+        if (oldHorse) {
+          this.map.delete("horse");
+          oldHorse.clearTint();
+          this.map.set("bailongma", oldHorse);
+          this.ultimates.register("bailongma");
+        }
+        continue;
+      }
+      const d = new Disciple(this.scene, px, py, key, 0, 0);
+      this.disciples.push(d);
+      this.map.set(key, d);
+      if (key === "wukong") d.configureAttack({ type: "arc", damage: WUKONG.attack.damage, range: WUKONG.attack.range, cooldownMs: WUKONG.attack.cooldownMs, arcDeg: WUKONG.attack.arcDeg });
+      else if (key === "bajie") d.configureAttack({ type: "area", damage: BAJIE.attack.damage, range: BAJIE.attack.range, cooldownMs: BAJIE.attack.cooldownMs, knockbackForce: BAJIE.attack.knockbackForce });
+      else if (key === "wujing") d.configureAttack({ type: "projectile", damage: WUJING.attack.damage, range: WUJING.attack.range, cooldownMs: WUJING.attack.cooldownMs });
+      this.ultimates.register(key);
+    }
+  }
+
   recruit(poi: POIConfig, px: number, py: number) {
     const key = poi.recruitKey!;
 
@@ -286,6 +309,8 @@ export class DiscipleManager {
 
   setHeadbandBuff(buff: HeadbandBuff) { this.headbandBuff = buff; }
   getUltimateCooldowns(): { key: string; ratio: number }[] { return this.ultimates.getCooldowns(); }
+  tryFireUltimate(enemies: Phaser.Physics.Arcade.Group, boss?: Boss | null): boolean { return this.ultimates.tryFire(this.map, enemies, boss); }
+  hasUltimateReady(): boolean { return this.ultimates.hasReady(); }
   hideHorse() { (this.map.get("bailongma") ?? this.map.get("horse"))?.setVisible(false); }
   showHorse() { (this.map.get("bailongma") ?? this.map.get("horse"))?.setVisible(true); }
   has(key: string): boolean { return this.map.has(key); }

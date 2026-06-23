@@ -2,17 +2,19 @@ import Phaser from "phaser";
 import { WORLD } from "../config/GameConfig";
 
 const CELL = 80;
-const COLS = Math.ceil(WORLD.width / CELL);
-const ROWS = Math.ceil(WORLD.height / CELL);
 const REVEAL_RADIUS = 320;
 
 export class FogOfWar {
+  private cols: number;
+  private rows: number;
   private revealed: boolean[][];
   private fogGfx: Phaser.GameObjects.Graphics;
   private dirty = true;
 
   constructor(scene: Phaser.Scene) {
-    this.revealed = Array.from({ length: ROWS }, () => Array(COLS).fill(false));
+    this.cols = Math.ceil(WORLD.width / CELL);
+    this.rows = Math.ceil(WORLD.height / CELL);
+    this.revealed = Array.from({ length: this.rows }, () => Array(this.cols).fill(false));
     this.fogGfx = scene.add.graphics().setDepth(50);
   }
 
@@ -25,7 +27,7 @@ export class FogOfWar {
       for (let dx = -cellR; dx <= cellR; dx++) {
         const cx = pcx + dx;
         const cy = pcy + dy;
-        if (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS) continue;
+        if (cx < 0 || cx >= this.cols || cy < 0 || cy >= this.rows) continue;
         if (this.revealed[cy][cx]) continue;
 
         const wx = cx * CELL + CELL / 2;
@@ -46,7 +48,7 @@ export class FogOfWar {
   isRevealed(x: number, y: number): boolean {
     const cx = Math.floor(x / CELL);
     const cy = Math.floor(y / CELL);
-    if (cx < 0 || cx >= COLS || cy < 0 || cy >= ROWS) return false;
+    if (cx < 0 || cx >= this.cols || cy < 0 || cy >= this.rows) return false;
     return this.revealed[cy][cx];
   }
 
@@ -58,8 +60,8 @@ export class FogOfWar {
     this.fogGfx.clear();
     this.fogGfx.fillStyle(0x000000, 0.7);
 
-    for (let y = 0; y < ROWS; y++) {
-      for (let x = 0; x < COLS; x++) {
+    for (let y = 0; y < this.rows; y++) {
+      for (let x = 0; x < this.cols; x++) {
         if (!this.revealed[y][x]) {
           this.fogGfx.fillRect(x * CELL, y * CELL, CELL, CELL);
         }
@@ -67,7 +69,12 @@ export class FogOfWar {
     }
   }
 
+  destroy() {
+    this.fogGfx.destroy();
+    this.revealed.length = 0;
+  }
+
+  getCols(): number { return this.cols; }
+  getRows(): number { return this.rows; }
   static getCellSize(): number { return CELL; }
-  static getCols(): number { return COLS; }
-  static getRows(): number { return ROWS; }
 }

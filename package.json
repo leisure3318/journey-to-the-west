@@ -28,10 +28,12 @@
     "staticOutPath": "assets"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.0",
     "phaser": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^25.9.3",
+    "buffer": "^6.0.3",
     "gh-pages": "^6.3.0",
     "parcel": "^2.16.4",
     "parcel-reporter-static-files-copy": "^1.5.3",

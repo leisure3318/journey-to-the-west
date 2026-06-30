@@ -151,7 +151,7 @@ export class BootScene extends Phaser.Scene {
 
   create() {
     for (const hero of HEROES) {
-      const dirs = ["down", "right", "up", "left"];
+      const dirs = ["up", "right", "down", "left"];
       for (let d = 0; d < 4; d++) {
         this.anims.create({
           key: `${hero}_${dirs[d]}_walk`,
@@ -381,7 +381,7 @@ export class BootScene extends Phaser.Scene {
     for (const key of BOSS_SHEET_KEYS) {
       const texKey = `boss_${key}`;
       if (!this.textures.exists(texKey + "_sheet")) continue;
-      const dirs = ["down", "right", "up", "left"];
+      const dirs = ["up", "right", "down", "left"];
       for (let d = 0; d < 4; d++) {
         this.anims.create({
           key: `${texKey}_${dirs[d]}_walk`,

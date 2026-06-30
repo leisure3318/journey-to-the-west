@@ -10,6 +10,7 @@ export interface StageResultStats {
   hpRatio: number;
   bossesKilled: string[];
   carryOver: CarryOverState;
+  entryCarryOver?: CarryOverState;
 }
 
 export class StageResultPanel {
@@ -89,7 +90,7 @@ export class StageResultPanel {
     retryBtn.on("pointerover", () => retryBtn.setColor("#ffffff"));
     retryBtn.on("pointerout", () => retryBtn.setColor("#aaaaaa"));
     retryBtn.on("pointerdown", () => {
-      this.scene.scene.start("GameScene", { stageIndex: stats.stageIndex });
+      this.scene.scene.start("GameScene", { stageIndex: stats.stageIndex, carryOver: stats.entryCarryOver });
     });
 
     const menuBtn = this.scene.add.text(hasNext ? 510 : 460, btnY, "[ 选关 ]", {

@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { saveSystem } from "../systems/SaveSystem";
+import { CarryOverState } from "../config/StageConfig";
 
 export interface GameOverStats {
   elapsedMs: number;
@@ -7,6 +8,7 @@ export interface GameOverStats {
   level: number;
   bossesKilled: string[];
   stageIndex?: number;
+  entryCarryOver?: CarryOverState;
 }
 
 export class GameOverPanel {
@@ -51,7 +53,7 @@ export class GameOverPanel {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
     restart.on("pointerdown", () => {
       if (stats.stageIndex != null) {
-        this.scene.scene.start("GameScene", { stageIndex: stats.stageIndex });
+        this.scene.scene.start("GameScene", { stageIndex: stats.stageIndex, carryOver: stats.entryCarryOver });
       } else {
         this.scene.scene.restart();
       }

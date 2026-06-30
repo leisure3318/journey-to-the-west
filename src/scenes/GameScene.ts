@@ -74,6 +74,7 @@ export class GameScene extends Phaser.Scene {
 
   private stage?: StageDef;
   private carryOver?: CarryOverState;
+  private entryCarryOver?: CarryOverState;
   private totalElapsedMs = 0;
   private totalKills = 0;
 
@@ -83,9 +84,11 @@ export class GameScene extends Phaser.Scene {
     if (data.stageIndex != null && data.stageIndex < STAGES.length) {
       this.stage = STAGES[data.stageIndex];
       this.carryOver = data.carryOver;
+      this.entryCarryOver = data.carryOver;
     } else {
       this.stage = STAGES[0];
       this.carryOver = undefined;
+      this.entryCarryOver = undefined;
     }
   }
 
@@ -382,6 +385,7 @@ export class GameScene extends Phaser.Scene {
       hpRatio: this.player.hp / this.player.maxHp,
       bossesKilled: this.bossesKilled,
       carryOver: carry,
+      entryCarryOver: this.entryCarryOver,
     });
   }
 
@@ -404,7 +408,7 @@ export class GameScene extends Phaser.Scene {
         this.gameOver = true; this.soundMgr.gameOver(); this.soundMgr.stopBgm();
         this.hud.update(0, this.player.maxHp, this.xpSystem.getXp(), this.xpSystem.getXpToNext(),
           this.xpSystem.getLevel(), this.spawner.getElapsed(), this.kills);
-        this.gameOverPanel.show({ elapsedMs: this.totalElapsedMs + this.spawner.getElapsed(), kills: this.totalKills, level: this.xpSystem.getLevel(), bossesKilled: this.bossesKilled, stageIndex: this.stage?.index }); return;
+        this.gameOverPanel.show({ elapsedMs: this.totalElapsedMs + this.spawner.getElapsed(), kills: this.totalKills, level: this.xpSystem.getLevel(), bossesKilled: this.bossesKilled, stageIndex: this.stage?.index, entryCarryOver: this.entryCarryOver }); return;
       }
     }
 

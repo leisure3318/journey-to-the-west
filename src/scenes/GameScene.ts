@@ -264,30 +264,32 @@ export class GameScene extends Phaser.Scene {
       this.soundMgr.mountHorse();
     });
     this.events.on("boss-killed", () => {
-      const bossName = this.bossSystem.getBoss()?.bossName ?? "";
-      const stats = { elapsedMs: this.spawner.getElapsed(), kills: this.kills, level: this.xpSystem.getLevel(), bossName, bossesKilled: this.bossesKilled };
-      this.bossSystem.onBossKilled(stats);
-      this.player.dismountHorse();
-      this.discipleMgr.showHorse();
-      if (bossName) {
-        this.bossesKilled.push(bossName);
-        const relic = this.bossLoot.generateRelic(bossName);
-        this.bossLoot.applyRelic(relic, this.upgrades);
-        this.player.maxHp = this.upgrades.playerMaxHp;
-        this.player.moveSpeed = this.upgrades.playerSpeed;
-        this.player.shieldMax = this.upgrades.shieldMax;
-        this.relicBar.addRelic(relic);
-        this.relics.push(relic);
-        this.showRelicDrop(relic);
-      }
-      if (this.bossSystem.isFinalBossDefeated()) {
-        this.gameOver = true;
-        this.soundMgr.victory();
-        this.soundMgr.stopBgm();
-        this.time.delayedCall(2000, () => this.showStageResult());
-      } else if (!this.bossSystem.isFinalBossDefeated()) {
-        this.soundMgr.bossDefeat();
-      }
+      try {
+        const bossName = this.bossSystem.getBoss()?.bossName ?? "";
+        const stats = { elapsedMs: this.spawner.getElapsed(), kills: this.kills, level: this.xpSystem.getLevel(), bossName, bossesKilled: this.bossesKilled };
+        this.bossSystem.onBossKilled(stats);
+        this.player.dismountHorse();
+        this.discipleMgr.showHorse();
+        if (bossName) {
+          this.bossesKilled.push(bossName);
+          const relic = this.bossLoot.generateRelic(bossName);
+          this.bossLoot.applyRelic(relic, this.upgrades);
+          this.player.maxHp = this.upgrades.playerMaxHp;
+          this.player.moveSpeed = this.upgrades.playerSpeed;
+          this.player.shieldMax = this.upgrades.shieldMax;
+          this.relicBar.addRelic(relic);
+          this.relics.push(relic);
+          this.showRelicDrop(relic);
+        }
+        if (this.bossSystem.isFinalBossDefeated()) {
+          this.gameOver = true;
+          this.soundMgr.victory();
+          this.soundMgr.stopBgm();
+          this.time.delayedCall(2000, () => this.showStageResult());
+        } else if (!this.bossSystem.isFinalBossDefeated()) {
+          this.soundMgr.bossDefeat();
+        }
+      } catch (e) { console.error("boss-killed handler error:", e); }
     });
     this.events.on("xp-collected", () => { this.soundMgr.xpPickup(); });
     this.events.on("ultimate-activated", () => { this.soundMgr.ultimate(); });
@@ -348,12 +350,12 @@ export class GameScene extends Phaser.Scene {
       "enemy-trap", "enemy-summon", "enemy-shoot", "enemy-explode",
     ];
     for (const e of customEvents) this.events.removeAllListeners(e);
-    this.combat.destroy();
-    this.fog.destroy();
-    this.biomeEffects.destroy();
-    if (this.auraRing) { this.auraRing.destroy(); this.auraRing = undefined; }
+    try { this.combat.destroy(); } catch (e) { console.error("combat destroy:", e); }
+    try { this.fog.destroy(); } catch (e) { console.error("fog destroy:", e); }
+    try { this.biomeEffects.destroy(); } catch (e) { console.error("biome destroy:", e); }
+    if (this.auraRing) { try { this.auraRing.destroy(); } catch (_) {} this.auraRing = undefined; }
     this.soundMgr.stopBgm();
-    this.enemies.clear(true, true);
+    try { if (this.enemies?.children) this.enemies.clear(true, true); } catch (e) { console.error("enemies clear:", e); }
   }
 
   private showStageResult() {

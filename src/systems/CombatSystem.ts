@@ -162,11 +162,8 @@ export class CombatSystem {
   }
 
   destroy() {
-    this.dmgPool.forEach(t => t.destroy());
-    this.dmgPool.length = 0;
-    this.enemyHpGfx.destroy();
-    this.projectiles.clear(true, true);
-    if (this.bossCollider) { this.bossCollider.destroy(); this.bossCollider = undefined; }
+    this.dmgPool = [];
+    try { if (this.bossCollider) { this.bossCollider.destroy(); this.bossCollider = undefined; } } catch (_) {}
   }
 
   private showDamageNumber(x: number, y: number, amount: number, isCrit: boolean) {

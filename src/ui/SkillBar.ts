@@ -110,6 +110,8 @@ export class SkillBar {
     foguang: "佛光", jianbu: "健步", jinguang: "金光", bore: "般若",
     headband: "紧箍咒", mercy: "大慈悲", trail: "龙息",
     wukong_ult: "大圣蓄力", bajie_ult: "天蓬蓄力", wujing_ult: "卷帘蓄力", bailongma_ult: "化龙蓄力",
+    evo_dasheng: "齐天大圣", evo_wanhou: "万猴朝宗", evo_shishen: "食神",
+    evo_jinshen: "金身罗汉", evo_shenmu: "通天神目",
   };
 
   private getSkillName(id: string): string {

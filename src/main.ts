@@ -16,7 +16,7 @@ function showError(msg: string) {
   console.error("[GAME ERROR]", msg);
 }
 
-window.addEventListener("error", (e) => showError(`${e.message} @ ${e.filename}:${e.lineno}`));
+window.addEventListener("error", (e) => showError(`${e.message} @ ${e.filename}:${e.lineno}\n${e.error?.stack ?? ""}`));
 window.addEventListener("unhandledrejection", (e) => showError(`Promise: ${e.reason}`));
 
 const config: Phaser.Types.Core.GameConfig = {

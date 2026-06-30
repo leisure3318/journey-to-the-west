@@ -58,7 +58,7 @@ export class RelicBar {
     const icon = this.scene.add.image(0, 0, relic.icon).setDisplaySize(24, 24);
     slot.add(icon);
 
-    const buffLines = relic.buffs.map(b => b.label).join(" ");
+    const buffLines = (relic.buffs ?? []).map(b => b.label).join(" ");
     const buffText = this.scene.add.text(-6, 18, buffLines, {
       fontSize: "8px", color: "#aaddaa",
       stroke: "#000000", strokeThickness: 2,
@@ -88,9 +88,10 @@ export class RelicBar {
 
   private createTooltip(relic: Relic): Phaser.GameObjects.Container {
     const tip = this.scene.add.container(-44, 0);
-    const lines = [relic.name, ...relic.buffs.map(b => b.label)];
+    const buffs = relic.buffs ?? [];
+    const lines = [relic.name, ...buffs.map(b => b.label)];
     const maxW = Math.max(...lines.map(l => l.length)) * 12 + 20;
-    const h = 24 + relic.buffs.length * 18;
+    const h = 24 + buffs.length * 18;
 
     const bg = this.scene.add.rectangle(-maxW / 2, 0, maxW, h, 0x1a1a2e, 0.92)
       .setStrokeStyle(1, 0xffaa00, 0.6).setOrigin(0.5);
@@ -102,7 +103,7 @@ export class RelicBar {
     }).setOrigin(0.5, 0);
     tip.add(title);
 
-    relic.buffs.forEach((buff, i) => {
+    (relic.buffs ?? []).forEach((buff, i) => {
       const txt = this.scene.add.text(-maxW / 2, -h / 2 + 24 + i * 18, buff.label, {
         fontSize: "11px", color: "#66ff66",
         stroke: "#000000", strokeThickness: 2,
@@ -141,7 +142,7 @@ export class RelicBar {
         fontSize: "12px", color: "#ffaa00", fontStyle: "bold",
         stroke: "#000000", strokeThickness: 2,
       });
-      const buffs = this.scene.add.text(px - panelW / 2 + 52, ry + 8, r.buffs.map(b => b.label).join("  "), {
+      const buffs = this.scene.add.text(px - panelW / 2 + 52, ry + 8, (r.buffs ?? []).map(b => b.label).join("  "), {
         fontSize: "9px", color: "#66ff66",
         stroke: "#000000", strokeThickness: 2,
       });

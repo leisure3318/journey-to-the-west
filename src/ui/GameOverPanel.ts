@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { saveSystem } from "../systems/SaveSystem";
 import { CarryOverState } from "../config/StageConfig";
+import { calcScore, showSubmitDialog } from "../systems/LeaderboardSystem";
 
 export interface GameOverStats {
   elapsedMs: number;
@@ -48,7 +49,18 @@ export class GameOverPanel {
       fontSize: "12px", color: "#888888", align: "center", lineSpacing: 6,
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
-    const restart = this.scene.add.text(280, 390, "[ 再来一次 ]", {
+    const score = calcScore(stats.kills, stats.stageIndex ?? 0, 0);
+    const uploadBtn = this.scene.add.text(400, 358, `上传天梯榜  (得分 ${score})`, {
+      fontSize: "13px", color: "#88ccff",
+      stroke: "#000000", strokeThickness: 2,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
+    uploadBtn.on("pointerover", () => uploadBtn.setColor("#bbddff"));
+    uploadBtn.on("pointerout", () => uploadBtn.setColor("#88ccff"));
+    uploadBtn.on("pointerdown", () => {
+      showSubmitDialog(score, stats.kills, stats.stageIndex ?? 0, 0, stats.elapsedMs);
+    });
+
+    const restart = this.scene.add.text(280, 398, "[ 再来一次 ]", {
       fontSize: "20px", color: "#ffdd44",
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
     restart.on("pointerdown", () => {
@@ -59,12 +71,12 @@ export class GameOverPanel {
       }
     });
 
-    const selectBtn = this.scene.add.text(400, 390, "[ 选关 ]", {
+    const selectBtn = this.scene.add.text(400, 398, "[ 选关 ]", {
       fontSize: "20px", color: "#aaaaaa",
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
     selectBtn.on("pointerdown", () => this.scene.scene.start("StageSelectScene"));
 
-    const menu = this.scene.add.text(520, 390, "[ 主菜单 ]", {
+    const menu = this.scene.add.text(520, 398, "[ 主菜单 ]", {
       fontSize: "20px", color: "#aaaaaa",
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
     menu.on("pointerdown", () => this.scene.scene.start("MenuScene"));

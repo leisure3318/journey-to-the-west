@@ -5,6 +5,7 @@ import { CutsceneScene } from "./scenes/CutsceneScene";
 import { StageSelectScene } from "./scenes/StageSelectScene";
 import { GalleryScene } from "./scenes/GalleryScene";
 import { GameScene } from "./scenes/GameScene";
+import { LeaderboardScene } from "./scenes/LeaderboardScene";
 
 const errorDiv = document.createElement("div");
 errorDiv.style.cssText = "position:fixed;top:0;left:0;right:0;background:rgba(200,0,0,0.9);color:#fff;font:14px monospace;padding:8px;z-index:99999;display:none;max-height:30vh;overflow:auto;";
@@ -30,7 +31,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, MenuScene, CutsceneScene, StageSelectScene, GalleryScene, GameScene],
+  scene: [BootScene, MenuScene, CutsceneScene, StageSelectScene, GalleryScene, GameScene, LeaderboardScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

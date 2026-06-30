@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { STAGES, CarryOverState } from "../config/StageConfig";
 import { saveSystem } from "../systems/SaveSystem";
+import { calcScore, showSubmitDialog } from "../systems/LeaderboardSystem";
 
 export interface StageResultStats {
   stageIndex: number;
@@ -71,7 +72,18 @@ export class StageResultPanel {
       }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
     }
 
-    const btnY = 410;
+    const score = calcScore(stats.kills, stats.stageIndex, stats.hpRatio);
+    const uploadBtn = this.scene.add.text(400, 378, `上传天梯榜  (得分 ${score})`, {
+      fontSize: "13px", color: "#88ccff",
+      stroke: "#000000", strokeThickness: 2,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
+    uploadBtn.on("pointerover", () => uploadBtn.setColor("#bbddff"));
+    uploadBtn.on("pointerout", () => uploadBtn.setColor("#88ccff"));
+    uploadBtn.on("pointerdown", () => {
+      showSubmitDialog(score, stats.kills, stats.stageIndex, stats.hpRatio, stats.elapsedMs);
+    });
+
+    const btnY = 415;
     if (hasNext) {
       const nextBtn = this.scene.add.text(290, btnY, "[ 下一关 ]", {
         fontSize: "20px", color: "#ffdd44", fontStyle: "bold",

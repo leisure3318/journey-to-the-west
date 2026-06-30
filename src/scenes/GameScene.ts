@@ -131,6 +131,8 @@ export class GameScene extends Phaser.Scene {
 
     if (this.carryOver && this.carryOver.recruitedKeys.length > 0) {
       this.discipleMgr.preRecruit(this.carryOver.recruitedKeys, cx, cy);
+    } else if (!this.carryOver && stage.index > 0) {
+      this.discipleMgr.preRecruit(["wukong", "bajie", "wujing"], cx, cy);
     }
 
     this.enemies = this.physics.add.group({ classType: Enemy, runChildUpdate: false });
@@ -154,6 +156,10 @@ export class GameScene extends Phaser.Scene {
 
     if (this.carryOver && this.carryOver.recruitedKeys.includes("wukong")) {
       for (const key of this.carryOver.recruitedKeys) {
+        this.recruitment.markRecruited(key);
+      }
+    } else if (!this.carryOver && stage.index > 0) {
+      for (const key of ["wukong", "bajie", "wujing"]) {
         this.recruitment.markRecruited(key);
       }
     }

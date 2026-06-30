@@ -140,7 +140,7 @@ export class MenuScene extends Phaser.Scene {
       }
     });
 
-    const lbBtn = this.add.text(100, 535, "天梯榜", {
+    const lbBtn = this.add.text(630, 535, "天梯榜", {
       fontSize: "16px", color: "#88ccff",
       stroke: "#000000", strokeThickness: 3,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(20);
@@ -148,7 +148,7 @@ export class MenuScene extends Phaser.Scene {
     lbBtn.on("pointerout", () => lbBtn.setColor("#88ccff"));
     lbBtn.on("pointerdown", () => { this.soundMgr.menuClick(); this.scene.start("LeaderboardScene"); });
 
-    const galleryBtn = this.add.text(700, 535, "CG画廊", {
+    const galleryBtn = this.add.text(740, 535, "CG画廊", {
       fontSize: "16px", color: "#ccaa66",
       stroke: "#000000", strokeThickness: 3,
     }).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(20);

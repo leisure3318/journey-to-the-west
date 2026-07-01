@@ -50,15 +50,17 @@ export class GameOverPanel {
     }).setOrigin(0.5).setScrollFactor(0).setDepth(1001);
 
     const score = calcScore(stats.kills, stats.stageIndex ?? 0, 0);
-    const uploadBtn = this.scene.add.text(400, 358, `上传天梯榜  (得分 ${score})`, {
-      fontSize: "13px", color: "#88ccff",
-      stroke: "#000000", strokeThickness: 2,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
-    uploadBtn.on("pointerover", () => uploadBtn.setColor("#bbddff"));
-    uploadBtn.on("pointerout", () => uploadBtn.setColor("#88ccff"));
-    uploadBtn.on("pointerdown", () => {
-      showSubmitDialog(score, stats.kills, stats.stageIndex ?? 0, 0, stats.elapsedMs);
-    });
+    if (score > 0) {
+      const uploadBtn = this.scene.add.text(400, 358, `上传天梯榜  (得分 ${score})`, {
+        fontSize: "13px", color: "#88ccff",
+        stroke: "#000000", strokeThickness: 2,
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(1001).setInteractive({ useHandCursor: true });
+      uploadBtn.on("pointerover", () => uploadBtn.setColor("#bbddff"));
+      uploadBtn.on("pointerout", () => uploadBtn.setColor("#88ccff"));
+      uploadBtn.on("pointerdown", () => {
+        showSubmitDialog(score, stats.kills, stats.stageIndex ?? 0, 0, stats.elapsedMs);
+      });
+    }
 
     const restart = this.scene.add.text(280, 398, "[ 再来一次 ]", {
       fontSize: "20px", color: "#ffdd44",
